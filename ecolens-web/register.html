@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - EcoLens AI</title>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/register.css">
+</head>
+<body>
+    <div class="register-container">
+        <!-- Left Side - Branding -->
+        <div class="register-left">
+            <div class="branding">
+                <div class="logo-large">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <h1>EcoLens AI</h1>
+                <p class="tagline">Join the carbon monitoring revolution</p>
+                
+                <div class="features">
+                    <div class="feature-item">
+                        <i class="fas fa-satellite"></i>
+                        <span>Real-time satellite monitoring</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-brain"></i>
+                        <span>AI-powered carbon detection</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-users"></i>
+                        <span>Join 10,000+ contributors</span>
+                    </div>
+                    <div class="feature-item">
+                        <i class="fas fa-trophy"></i>
+                        <span>Earn badges & rewards</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-banner">
+                <div class="stat">
+                    <h3>50K+</h3>
+                    <p>Sites Monitored</p>
+                </div>
+                <div class="stat">
+                    <h3>2.5M</h3>
+                    <p>Tons CO₂ Tracked</p>
+                </div>
+                <div class="stat">
+                    <h3>150+</h3>
+                    <p>Countries</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side - Registration Form -->
+        <div class="register-right">
+            <div class="register-form-container">
+                <div class="form-header">
+                    <h2>Create Account</h2>
+                    <p>Start monitoring carbon emissions today</p>
+                </div>
+
+                <!-- Registration Form -->
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <!-- Name Field -->
+                    <div class="form-group">
+                        <label for="fullName">
+                            <i class="fas fa-user"></i> Full Name
+                        </label>
+                        <input 
+                            type="text" 
+                            id="fullName" 
+                            placeholder="Enter your full name"
+                            required
+                        >
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="form-group">
+                        <label for="email">
+                            <i class="fas fa-envelope"></i> Email Address
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            placeholder="Enter your email"
+                            required
+                        >
+                    </div>
+
+                    <!-- Password Field -->
+                    <div class="form-group">
+                        <label for="password">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <div class="password-input">
+                            <input 
+                                type="password" 
+                                id="password" 
+                                placeholder="Create a password"
+                                required
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('password')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength" id="passwordStrength">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strengthFill"></div>
+                            </div>
+                            <span class="strength-text" id="strengthText">Enter password</span>
+                        </div>
+                    </div>
+
+                    <!-- Confirm Password Field -->
+                    <div class="form-group">
+                        <label for="confirmPassword">
+                            <i class="fas fa-lock"></i> Confirm Password
+                        </label>
+                        <div class="password-input">
+                            <input 
+                                type="password" 
+                                id="confirmPassword" 
+                                placeholder="Confirm your password"
+                                required
+                            >
+                            <button type="button" class="toggle-password" onclick="togglePassword('confirmPassword')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Terms & Conditions -->
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="agreeTerms" required>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">
+                                I agree to the <a href="#" onclick="alert('Terms coming soon!')">Terms & Conditions</a> 
+                                and <a href="#" onclick="alert('Privacy Policy coming soon!')">Privacy Policy</a>
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn-register" id="registerBtn">
+                        <i class="fas fa-user-plus"></i>
+                        Create Account
+                    </button>
+                </form>
+
+                <!-- Divider -->
+                <div class="divider">
+                    <span>OR</span>
+                </div>
+
+                <!-- Social Login -->
+                <button class="btn-google" onclick="handleGoogleSignup()">
+                    <i class="fab fa-google"></i>
+                    Sign up with Google
+                </button>
+
+                <!-- Login Link -->
+                <div class="form-footer">
+                    <p>Already have an account? <a href="index.html">Sign In</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Creating your account...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/register.js"></script>
+</body>
+</html>
