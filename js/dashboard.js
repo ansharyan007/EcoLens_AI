@@ -30,11 +30,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     initSidebar();
     initTopNav();
-    initHeatmap();
     
     // Event listeners
     document.getElementById('timeFilter')?.addEventListener('change', loadTopContributors);
     document.getElementById('refreshHeatmap')?.addEventListener('click', loadHeatmapData);
+    document.getElementById('zoomInHeatmap')?.addEventListener('click', zoomInHeatmap);
+    document.getElementById('zoomOutHeatmap')?.addEventListener('click', zoomOutHeatmap);
 });
 
 // ============================================
@@ -128,12 +129,9 @@ function updateUserUI() {
         userNameEl.textContent = displayName;
     }
     
-    const topNavAvatarEl = document.getElementById('userAvatar');
+    const topNavAvatarEl = document.getElementById('topNavAvatar');
     if (topNavAvatarEl && photoURL) {
-        const imgEl = topNavAvatarEl.querySelector('img');
-        if (imgEl) {
-            imgEl.src = photoURL;
-        }
+        topNavAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
     }
 }
 
@@ -217,6 +215,12 @@ async function loadDashboardData() {
             loadTopContributors()
         ]);
         console.log('✅ All dashboard data loaded');
+        
+        // Initialize heatmap AFTER other data is loaded
+        setTimeout(() => {
+            initHeatmap();
+        }, 500);
+        
     } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
         loadMockData();
@@ -507,7 +511,7 @@ function loadMockContributors() {
 }
 
 // ============================================
-// GLOBAL HEATMAP
+// GLOBAL HEATMAP - FIXED VERSION
 // ============================================
 
 function initHeatmap() {
@@ -515,22 +519,41 @@ function initHeatmap() {
     
     const heatmapEl = document.getElementById('globalHeatmap');
     if (!heatmapEl) {
-        console.warn('⚠️ globalHeatmap element not found');
+        console.error('❌ globalHeatmap element not found!');
         return;
     }
     
     try {
-        map = L.map('globalHeatmap').setView([20, 0], 2);
+        // Clear any existing map
+        if (map) {
+            map.remove();
+        }
         
+        // Initialize map with better view
+        map = L.map('globalHeatmap', {
+            center: [20, 0],
+            zoom: 2,
+            minZoom: 2,
+            maxZoom: 10,
+            worldCopyJump: true
+        });
+        
+        // Add tile layer with better visibility
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
-            maxZoom: 18
+            maxZoom: 18,
+            noWrap: true
         }).addTo(map);
         
-        console.log('✅ Heatmap initialized');
+        console.log('✅ Heatmap initialized successfully');
+        
+        // Load heatmap data
         loadHeatmapData();
+        
     } catch (error) {
         console.error('❌ Error initializing heatmap:', error);
+        // Try to load mock heatmap as fallback
+        setTimeout(loadMockHeatmap, 1000);
     }
 }
 
@@ -538,50 +561,80 @@ async function loadHeatmapData() {
     console.log('🗺️ Loading heatmap data...');
     
     if (!map) {
-        console.warn('⚠️ Map not initialized, skipping heatmap data');
+        console.error('❌ Map not initialized');
         return;
     }
     
     try {
         const sitesSnapshot = await db.collection('sites').get();
-        console.log('✅ Sites for heatmap:', sitesSnapshot.size);
+        console.log(`✅ Found ${sitesSnapshot.size} sites for heatmap`);
         
-        if (sitesSnapshot.empty) {
+        if (sitesSnapshot.size === 0) {
             console.log('⚠️ No sites found, loading mock heatmap');
             loadMockHeatmap();
             return;
         }
         
         const heatData = [];
+        let maxCarbon = 0;
+        
+        // First pass: find maximum carbon value for normalization
+        sitesSnapshot.forEach(doc => {
+            const site = doc.data();
+            const carbon = site.carbonEstimate || 0;
+            if (carbon > maxCarbon) maxCarbon = carbon;
+        });
+        
+        console.log(`📊 Max carbon value: ${maxCarbon}`);
+        
+        // Second pass: create heat data with normalized intensity
         sitesSnapshot.forEach(doc => {
             const site = doc.data();
             if (site.location) {
                 const lat = site.location.latitude || site.location._lat;
                 const lng = site.location.longitude || site.location._long;
                 if (lat && lng) {
-                    const intensity = Math.min((site.carbonEstimate || 200) / 1000, 1);
+                    // Normalize intensity between 0.1 and 1.0
+                    const carbon = site.carbonEstimate || 0;
+                    const intensity = maxCarbon > 0 ? 
+                        Math.max(0.1, Math.min(1.0, carbon / maxCarbon)) : 0.1;
+                    
                     heatData.push([lat, lng, intensity]);
                 }
             }
         });
         
+        console.log(`📍 Generated ${heatData.length} heat points`);
+        
+        // Remove existing heat layer
         if (heatLayer) {
             map.removeLayer(heatLayer);
         }
         
         if (heatData.length > 0) {
+            // Create heat layer with more vibrant settings
             heatLayer = L.heatLayer(heatData, {
-                radius: 25,
-                blur: 15,
-                maxZoom: 10,
+                radius: 35,
+                blur: 20,
+                maxZoom: 8,
+                minOpacity: 0.4,
                 gradient: {
-                    0.0: '#22c55e',
-                    0.5: '#eab308',
-                    1.0: '#ef4444'
+                    0.0: '#22c55e',  // Green
+                    0.5: '#eab308',  // Yellow
+                    0.8: '#f97316',  // Orange
+                    1.0: '#ef4444'   // Red
                 }
             }).addTo(map);
             
-            console.log('✅ Heatmap data loaded');
+            console.log('✅ Heatmap data loaded successfully');
+            
+            // Fit map to show all heat points
+            const group = new L.featureGroup(heatData.map(point => L.marker([point[0], point[1]])));
+            map.fitBounds(group.getBounds().pad(0.1));
+            
+        } else {
+            console.log('⚠️ No valid heat data points');
+            loadMockHeatmap();
         }
         
     } catch (error) {
@@ -591,16 +644,25 @@ async function loadHeatmapData() {
 }
 
 function loadMockHeatmap() {
-    console.log('🎭 Loading mock heatmap');
+    console.log('🎭 Loading mock heatmap data');
     
-    if (!map) return;
+    if (!map) {
+        console.error('❌ Map not available for mock data');
+        return;
+    }
     
+    // More vibrant mock data with higher intensities
     const mockLocations = [
-        [28.7041, 77.1025, 0.6],
-        [19.0760, 72.8777, 0.9],
-        [12.9716, 77.5946, 0.4],
-        [13.0827, 80.2707, 0.7],
-        [22.5726, 88.3639, 0.5]
+        [28.7041, 77.1025, 0.8],  // Delhi - High intensity
+        [19.0760, 72.8777, 0.9],  // Mumbai - Very high
+        [12.9716, 77.5946, 0.6],  // Bangalore - Medium
+        [13.0827, 80.2707, 0.7],  // Chennai - Medium-high
+        [22.5726, 88.3639, 0.5],  // Kolkata - Medium
+        [17.3850, 78.4867, 0.6],  // Hyderabad
+        [18.5204, 73.8567, 0.4],  // Pune
+        [26.9124, 75.7873, 0.3],  // Jaipur
+        [26.8467, 80.9462, 0.5],  // Lucknow
+        [23.0225, 72.5714, 0.4]   // Ahmedabad
     ];
     
     if (heatLayer) {
@@ -608,15 +670,35 @@ function loadMockHeatmap() {
     }
     
     heatLayer = L.heatLayer(mockLocations, {
-        radius: 25,
-        blur: 15,
-        maxZoom: 10,
+        radius: 35,
+        blur: 20,
+        maxZoom: 8,
+        minOpacity: 0.4,
         gradient: {
             0.0: '#22c55e',
-            0.5: '#eab308',
+            0.5: '#eab308', 
+            0.8: '#f97316',
             1.0: '#ef4444'
         }
     }).addTo(map);
+    
+    // Fit map to show mock data
+    const group = new L.featureGroup(mockLocations.map(point => L.marker([point[0], point[1]])));
+    map.fitBounds(group.getBounds().pad(0.1));
+    
+    console.log('✅ Mock heatmap loaded');
+}
+
+function zoomInHeatmap() {
+    if (map) {
+        map.zoomIn();
+    }
+}
+
+function zoomOutHeatmap() {
+    if (map) {
+        map.zoomOut();
+    }
 }
 
 // ============================================

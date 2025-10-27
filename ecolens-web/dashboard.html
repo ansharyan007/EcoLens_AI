@@ -159,10 +159,28 @@
                             <button class="btn-icon" title="Refresh" id="refreshHeatmap">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
+                            <button class="btn-icon" title="Zoom In" id="zoomInHeatmap">
+                                <i class="fas fa-search-plus"></i>
+                            </button>
+                            <button class="btn-icon" title="Zoom Out" id="zoomOutHeatmap">
+                                <i class="fas fa-search-minus"></i>
+                            </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div id="globalHeatmap" class="heatmap-container"></div>
+                        <div class="heatmap-legend">
+                            <div class="legend-title">Carbon Intensity</div>
+                            <div class="legend-gradient">
+                                <span class="legend-label">Low</span>
+                                <div class="gradient-bar">
+                                    <div class="gradient-stop" style="background: #22c55e"></div>
+                                    <div class="gradient-stop" style="background: #eab308"></div>
+                                    <div class="gradient-stop" style="background: #ef4444"></div>
+                                </div>
+                                <span class="legend-label">High</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
