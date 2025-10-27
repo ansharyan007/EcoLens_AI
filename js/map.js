@@ -1146,9 +1146,37 @@ function zoomToSite(lat, lon, siteId) {
     });
 }
 
+// VIEW SITE DETAILS - Navigate to analysis page with data
 function viewSiteDetails(siteId) {
+    // Find the site in the allSites array
+    const site = allSites.find(s => s.id === siteId);
+
+    if (site) {
+        // Store site data in sessionStorage for the analysis page
+        sessionStorage.setItem('currentSiteData', JSON.stringify({
+            id: site.id,
+            name: site.name || `${site.facilityType || 'Industrial'} Site`,
+            latitude: site.latitude,
+            longitude: site.longitude,
+            address: site.address || `${site.latitude.toFixed(4)}°N, ${site.longitude.toFixed(4)}°E`,
+            facilityType: site.facilityType || 'unknown',
+            carbonEstimate: site.carbonEstimate || 0,
+            reportCount: site.reportCount || 0,
+            verifiedViolation: site.verifiedViolation || false,
+            aiConfidence: site.aiConfidence || 0.85,
+            createdAt: site.createdAt,
+            lastUpdated: site.lastUpdated,
+            createdBy: site.createdBy,
+            notes: site.notes || ''
+        }));
+
+        debugLog('🗺️', 'Navigating to site details:', site.name);
+    }
+
+    // Navigate to the analysis page
     window.location.href = `site-analysis.html?id=${siteId}`;
 }
+
 
 function loadMockSites() {
     allSites = [
