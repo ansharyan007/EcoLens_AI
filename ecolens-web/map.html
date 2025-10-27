@@ -11,7 +11,7 @@
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Custom CSS - FIXED PATHS -->
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/map.css">
 </head>
@@ -65,18 +65,33 @@
         <div class="map-sidebar">
             <div class="sidebar-header">
                 <h2>Map Explorer</h2>
-                <p>Explore industrial sites globally</p>
+                <p>Search cities to view environmental data</p>
             </div>
 
-            <!-- Search -->
-            <div class="search-container">
-                <i class="fas fa-search"></i>
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Search location or coordinates..."
-                    onkeyup="filterSites()"
-                >
+            <!-- Enhanced Search with Button -->
+            <div class="search-container-enhanced">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search for any city in India..."
+                        onkeypress="handleSearchKeyPress(event)"
+                    >
+                    <button class="search-clear-btn" id="clearSearchBtn" onclick="clearSearch()" style="display: none;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <button class="search-action-btn" onclick="performSearch()">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </button>
+            </div>
+
+            <!-- Search Results Info -->
+            <div id="searchResultsInfo" class="search-results-info" style="display: none;">
+                <i class="fas fa-map-marker-alt"></i>
+                <span id="searchResultsText">Showing results for: <strong id="searchedCity"></strong></span>
             </div>
 
             <!-- Filter -->
@@ -92,9 +107,10 @@
 
             <!-- Sites List -->
             <div class="sites-list" id="sitesList">
-                <div class="loading-state">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading sites...</p>
+                <div class="empty-state">
+                    <i class="fas fa-search-location"></i>
+                    <p>Search for a city to view environmental data</p>
+                    <small>Try: Delhi, Mumbai, Bangalore, etc.</small>
                 </div>
             </div>
 
@@ -127,35 +143,40 @@
                 <div class="layer-toggle">
                     <input type="checkbox" id="layerAQI" onchange="toggleLayer('aqi')">
                     <label for="layerAQI">
-                        <i class="fas fa-wind"></i> Air Quality Index
+                        <i class="fas fa-wind"></i>
+                        <span>Air Quality Index</span>
                     </label>
                 </div>
                 
                 <div class="layer-toggle">
                     <input type="checkbox" id="layerPollution" onchange="toggleLayer('pollution')">
                     <label for="layerPollution">
-                        <i class="fas fa-smog"></i> Pollution (PM2.5)
+                        <i class="fas fa-smog"></i>
+                        <span>PM2.5 Pollution</span>
                     </label>
                 </div>
                 
                 <div class="layer-toggle">
                     <input type="checkbox" id="layerRainfall" onchange="toggleLayer('rainfall')">
                     <label for="layerRainfall">
-                        <i class="fas fa-cloud-rain"></i> Rainfall Data
+                        <i class="fas fa-cloud-rain"></i>
+                        <span>Rainfall Data</span>
                     </label>
                 </div>
                 
                 <div class="layer-toggle">
                     <input type="checkbox" id="layerNitrogen" onchange="toggleLayer('nitrogen')">
                     <label for="layerNitrogen">
-                        <i class="fas fa-flask"></i> Nitrogen Dioxide
+                        <i class="fas fa-flask"></i>
+                        <span>Nitrogen Dioxide</span>
                     </label>
                 </div>
                 
                 <div class="layer-toggle">
                     <input type="checkbox" id="layerTemp" onchange="toggleLayer('temperature')">
                     <label for="layerTemp">
-                        <i class="fas fa-temperature-high"></i> Temperature
+                        <i class="fas fa-temperature-high"></i>
+                        <span>Temperature</span>
                     </label>
                 </div>
             </div>
@@ -229,7 +250,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Custom Scripts - FIXED PATHS -->
+    <!-- Custom Scripts -->
     <script src="../js/config.js"></script>
     <script src="../js/auth.js"></script>
     <script src="../js/utils.js"></script>
