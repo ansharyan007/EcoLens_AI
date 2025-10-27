@@ -1,356 +1,218 @@
-// Profile Page JavaScript
-// Handles user profile display, badges, activity feed, and settings
+// Profile JavaScript - Dynamic User Profile
+// Loads user-specific data from Firestore
 
 let currentUser = null;
-
-// Demo user data
-const demoUser = {
-    id: 'demo123',
-    name: 'Demo User',
-    email: 'demo@ecolens.ai',
-    bio: 'Environmental advocate | Carbon monitoring enthusiast',
-    avatar: null,
-    points: 1250,
-    rank: 23,
-    totalReports: 47,
-    badgesEarned: 8,
-    memberSince: 'Aug 15, 2024'
-};
-
-// Badges data
-const badges = [
-    {
-        id: 'first_steps',
-        name: 'First Steps',
-        description: 'Submit your first report',
-        icon: 'fa-flag-checkered',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'rising_star',
-        name: 'Rising Star',
-        description: 'Earn 500 points',
-        icon: 'fa-star',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'carbon_detective',
-        name: 'Carbon Detective',
-        description: 'Report 10 sites',
-        icon: 'fa-search',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'top_contributor',
-        name: 'Top Contributor',
-        description: 'Reach Top 50',
-        icon: 'fa-trophy',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'accuracy_expert',
-        name: 'Accuracy Expert',
-        description: '95% report accuracy',
-        icon: 'fa-bullseye',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'violation_hunter',
-        name: 'Violation Hunter',
-        description: 'Report 5 violations',
-        icon: 'fa-exclamation-triangle',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'streak_master',
-        name: 'Streak Master',
-        description: '7-day streak',
-        icon: 'fa-fire',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'data_scientist',
-        name: 'Data Scientist',
-        description: 'Use AI analysis 50 times',
-        icon: 'fa-brain',
-        unlocked: true,
-        progress: 100
-    },
-    {
-        id: 'elite_rank',
-        name: 'Elite Rank',
-        description: 'Reach Top 10',
-        icon: 'fa-crown',
-        unlocked: false,
-        progress: 60
-    },
-    {
-        id: 'century_club',
-        name: 'Century Club',
-        description: 'Submit 100 reports',
-        icon: 'fa-hundred-points',
-        unlocked: false,
-        progress: 47
-    },
-    {
-        id: 'master_detector',
-        name: 'Master Detector',
-        description: 'Report all facility types',
-        icon: 'fa-industry',
-        unlocked: false,
-        progress: 83
-    },
-    {
-        id: 'legend',
-        name: 'Legend',
-        description: 'Earn 10,000 points',
-        icon: 'fa-medal',
-        unlocked: false,
-        progress: 12
-    }
-];
-
-// Recent activity data
-const recentActivity = [
-    {
-        id: 'act1',
-        type: 'report',
-        title: 'Reported Delhi Cement Plant',
-        description: 'High emissions detected',
-        emission: 'high',
-        carbon: 245,
-        date: '2 hours ago'
-    },
-    {
-        id: 'act2',
-        type: 'badge',
-        title: 'Earned "Data Scientist" Badge',
-        description: 'Used AI analysis 50 times',
-        date: '1 day ago'
-    },
-    {
-        id: 'act3',
-        type: 'report',
-        title: 'Reported Mumbai Steel Factory',
-        description: 'Medium emissions detected',
-        emission: 'medium',
-        carbon: 156,
-        date: '2 days ago'
-    },
-    {
-        id: 'act4',
-        type: 'report',
-        title: 'Reported Bangalore Power Plant',
-        description: 'Low emissions detected',
-        emission: 'low',
-        carbon: 67,
-        date: '3 days ago'
-    },
-    {
-        id: 'act5',
-        type: 'badge',
-        title: 'Earned "Streak Master" Badge',
-        description: 'Maintained 7-day streak',
-        date: '5 days ago'
-    }
-];
-
-// User reports data
-const userReports = [
-    {
-        id: 'rep1',
-        siteName: 'Delhi Cement Plant',
-        location: 'Delhi, India',
-        carbon: 245,
-        emissionLevel: 'high',
-        date: '2 hours ago'
-    },
-    {
-        id: 'rep2',
-        siteName: 'Mumbai Steel Factory',
-        location: 'Mumbai, Maharashtra',
-        carbon: 156,
-        emissionLevel: 'medium',
-        date: '2 days ago'
-    },
-    {
-        id: 'rep3',
-        siteName: 'Bangalore Power Plant',
-        location: 'Bangalore, Karnataka',
-        carbon: 67,
-        emissionLevel: 'low',
-        date: '3 days ago'
-    },
-    {
-        id: 'rep4',
-        siteName: 'Chennai Refinery',
-        location: 'Chennai, Tamil Nadu',
-        carbon: 420,
-        emissionLevel: 'high',
-        date: '1 week ago'
-    },
-    {
-        id: 'rep5',
-        siteName: 'Kolkata Chemical Plant',
-        location: 'Kolkata, West Bengal',
-        carbon: 89,
-        emissionLevel: 'low',
-        date: '1 week ago'
-    }
-];
+let userData = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Load demo user data
     loadUserProfile();
-    
-    // Load badges
-    loadBadges();
-    
-    // Load activity feed
-    loadActivityFeed();
-    
-    // Load user reports
-    loadUserReports();
 });
 
 // Load user profile
-function loadUserProfile() {
-    currentUser = demoUser;
-    
-    // Update profile header
-    document.getElementById('profileName').textContent = currentUser.name;
-    document.getElementById('profileBio').textContent = currentUser.bio;
-    document.getElementById('memberSince').textContent = currentUser.memberSince;
-    
-    // Update profile avatar
-    const profileAvatar = document.getElementById('profileAvatar');
-    if (currentUser.avatar) {
-        profileAvatar.innerHTML = `<img src="${currentUser.avatar}" alt="Profile">`;
-    } else {
-        const initials = currentUser.name.split(' ').map(n => n[0]).join('');
-        profileAvatar.textContent = initials;
+async function loadUserProfile() {
+    try {
+        // Check if user is logged in
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                // Not logged in - redirect to login
+                // window.location.href = 'index.html';
+                
+                // FOR TESTING: Load mock data
+                loadMockProfile();
+                return;
+            }
+            
+            currentUser = user;
+            
+            // Load user data from Firestore
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            
+            if (userDoc.exists) {
+                userData = userDoc.data();
+                displayUserProfile(userData);
+                loadUserReports(user.uid);
+                loadUserActivity(userData.recentActivity || []);
+                loadUserBadges(userData.badges || []);
+            } else {
+                console.error('User document not found');
+                loadMockProfile();
+            }
+        });
+    } catch (error) {
+        console.error('Error loading profile:', error);
+        loadMockProfile();
     }
-    
-    // Update sidebar
-    document.getElementById('sidebarName').textContent = currentUser.name;
-    document.getElementById('sidebarPoints').textContent = `${currentUser.points.toLocaleString()} points`;
-    
-    const sidebarAvatar = document.getElementById('sidebarAvatar');
-    if (currentUser.avatar) {
-        sidebarAvatar.innerHTML = `<img src="${currentUser.avatar}" alt="Profile">`;
-    } else {
-        const initials = currentUser.name.split(' ').map(n => n[0]).join('');
-        sidebarAvatar.textContent = initials;
-    }
-    
-    // Update stats
-    document.getElementById('totalPoints').textContent = currentUser.points.toLocaleString();
-    document.getElementById('globalRank').textContent = `#${currentUser.rank}`;
-    document.getElementById('totalReports').textContent = currentUser.totalReports;
-    document.getElementById('badgesEarned').textContent = `${currentUser.badgesEarned}/12`;
 }
 
-// Load badges
-function loadBadges() {
-    const badgesGrid = document.getElementById('badgesGrid');
+// Display user profile
+function displayUserProfile(data) {
+    // Header - Name and Bio
+    document.getElementById('profileName').textContent = data.displayName || 'User';
+    document.getElementById('profileBio').textContent = data.bio || 'New EcoLens contributor';
     
-    badgesGrid.innerHTML = badges.map(badge => {
-        const statusClass = badge.unlocked ? 'unlocked' : 'locked';
-        const progressHTML = !badge.unlocked ? `
-            <div class="badge-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${badge.progress}%"></div>
+    // Member Since
+    if (data.memberSince) {
+        const memberDate = data.memberSince.toDate();
+        const formattedDate = memberDate.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+        });
+        document.getElementById('memberSince').textContent = formattedDate;
+    }
+    
+    // Avatar
+    const avatarEls = document.querySelectorAll('#profileAvatar, #sidebarAvatar');
+    avatarEls.forEach(el => {
+        if (data.photoURL) {
+            el.innerHTML = `<img src="${data.photoURL}" alt="Avatar">`;
+        } else {
+            const initials = getInitials(data.displayName || 'User');
+            el.innerHTML = initials;
+        }
+    });
+    
+    // Sidebar Info
+    document.getElementById('sidebarName').textContent = data.displayName || 'User';
+    document.getElementById('sidebarPoints').textContent = `${formatNumber(data.points || 0)} points`;
+    
+    // Stats Cards
+    document.getElementById('totalPoints').textContent = formatNumber(data.points || 0);
+    document.getElementById('globalRank').textContent = `#${data.rank || '--'}`;
+    document.getElementById('totalReports').textContent = data.totalReports || 0;
+    document.getElementById('badgesEarned').textContent = `${data.badgesEarned || 0}/${data.totalBadges || 12}`;
+    
+    // Add rank badge if in top percentage
+    if (data.rank && data.rank <= 50) {
+        const rankPercentage = Math.ceil((data.rank / 1000) * 100); // Assuming 1000 users
+        const badge = document.createElement('span');
+        badge.className = 'stat-badge';
+        badge.textContent = `Top ${rankPercentage}%`;
+        document.getElementById('globalRank').parentElement.appendChild(badge);
+    }
+    
+    // Settings
+    if (data.settings) {
+        document.getElementById('emailNotifications').checked = data.settings.emailNotifications !== false;
+        document.getElementById('publicProfile').checked = data.settings.publicProfile !== false;
+    }
+}
+
+// Load user reports
+async function loadUserReports(userId) {
+    try {
+        const reportsSnapshot = await db.collection('reports')
+            .where('userId', '==', userId)
+            .orderBy('timestamp', 'desc')
+            .limit(10)
+            .get();
+        
+        const reports = [];
+        reportsSnapshot.forEach(doc => {
+            reports.push({ id: doc.id, ...doc.data() });
+        });
+        
+        displayUserReports(reports);
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        displayUserReports(getMockReports());
+    }
+}
+
+// Display user reports
+function displayUserReports(reports) {
+    const reportsList = document.getElementById('reportsList');
+    
+    if (reports.length === 0) {
+        reportsList.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 2rem;">No reports yet</p>';
+        return;
+    }
+    
+    reportsList.innerHTML = reports.map(report => `
+        <div class="report-item">
+            <div class="report-icon ${report.verified ? 'verified' : 'pending'}">
+                <i class="fas ${report.verified ? 'fa-check-circle' : 'fa-clock'}"></i>
+            </div>
+            <div class="report-info">
+                <h4>${report.siteName || 'Unknown Site'}</h4>
+                <p>${formatDate(report.timestamp)}</p>
+                <div class="report-meta">
+                    <span><i class="fas fa-smog"></i> ${Math.round(report.carbonEstimate || 0)} tons/year</span>
+                    <span><i class="fas fa-brain"></i> ${Math.round((report.aiConfidence || 0) * 100)}% confidence</span>
                 </div>
             </div>
-        ` : '';
-        
+            <button class="btn-view" onclick="viewReport('${report.id}')">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+// Load user activity
+function loadUserActivity(activities) {
+    const activityFeed = document.getElementById('activityFeed');
+    
+    if (activities.length === 0) {
+        activities = getMockActivity();
+    }
+    
+    activityFeed.innerHTML = activities.map(activity => `
+        <div class="activity-item">
+            <div class="activity-icon ${activity.type}">
+                <i class="fas fa-${activity.icon}"></i>
+            </div>
+            <div class="activity-info">
+                <p>${activity.message}</p>
+                <span class="activity-time">${formatTimestamp(activity.timestamp)}</span>
+            </div>
+            ${activity.points > 0 ? `<div class="activity-points">+${activity.points}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+// Load user badges
+function loadUserBadges(earnedBadges) {
+    const badgesGrid = document.getElementById('badgesGrid');
+    
+    // All available badges
+    const allBadges = [
+        { id: 'first-report', name: 'First Report', icon: 'fa-flag', color: '#22c55e', description: 'Submit your first report' },
+        { id: 'eco-warrior', name: 'Eco Warrior', icon: 'fa-leaf', color: '#10b981', description: 'Report 10 sites' },
+        { id: 'top-contributor', name: 'Top Contributor', icon: 'fa-star', color: '#f59e0b', description: 'Reach top 100' },
+        { id: 'carbon-detective', name: 'Carbon Detective', icon: 'fa-search', color: '#3b82f6', description: 'Find 5 violations' },
+        { id: 'satellite-master', name: 'Satellite Master', icon: 'fa-satellite', color: '#8b5cf6', description: 'Analyze 50 sites' },
+        { id: 'week-streak', name: 'Week Streak', icon: 'fa-fire', color: '#ef4444', description: '7 day streak' },
+        { id: 'month-streak', name: 'Month Streak', icon: 'fa-fire-flame-curved', color: '#dc2626', description: '30 day streak' },
+        { id: 'team-player', name: 'Team Player', icon: 'fa-users', color: '#06b6d4', description: 'Verify 20 reports' },
+        { id: 'accuracy-ace', name: 'Accuracy Ace', icon: 'fa-bullseye', color: '#14b8a6', description: '95%+ accuracy' },
+        { id: 'speed-demon', name: 'Speed Demon', icon: 'fa-bolt', color: '#eab308', description: '10 reports in 1 day' },
+        { id: 'global-guardian', name: 'Global Guardian', icon: 'fa-globe', color: '#6366f1', description: 'Report from 10 countries' },
+        { id: 'legendary', name: 'Legendary', icon: 'fa-crown', color: '#a855f7', description: 'Reach rank #1' }
+    ];
+    
+    badgesGrid.innerHTML = allBadges.map(badge => {
+        const earned = earnedBadges.includes(badge.id);
         return `
-            <div class="badge-item ${statusClass}" title="${badge.description}">
-                <div class="badge-icon">
+            <div class="badge-item ${earned ? 'earned' : 'locked'}">
+                <div class="badge-icon" style="background: ${earned ? badge.color : '#374151'};">
                     <i class="fas ${badge.icon}"></i>
                 </div>
-                <div class="badge-name">${badge.name}</div>
-                ${progressHTML}
+                <h4>${badge.name}</h4>
+                <p>${badge.description}</p>
+                ${earned ? '<div class="badge-earned"><i class="fas fa-check"></i></div>' : '<div class="badge-lock"><i class="fas fa-lock"></i></div>'}
             </div>
         `;
     }).join('');
 }
 
-// Load activity feed
-function loadActivityFeed() {
-    const activityFeed = document.getElementById('activityFeed');
-    
-    activityFeed.innerHTML = recentActivity.map(activity => {
-        if (activity.type === 'report') {
-            return `
-                <div class="activity-item">
-                    <div class="activity-icon ${activity.emission}">
-                        <i class="fas fa-flag"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">${activity.title}</div>
-                        <div class="activity-desc">${activity.description}</div>
-                        <div class="activity-meta">
-                            <span><i class="fas fa-smog"></i>${activity.carbon} tons/year</span>
-                            <span><i class="fas fa-clock"></i>${activity.date}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else {
-            return `
-                <div class="activity-item">
-                    <div class="activity-icon" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;">
-                        <i class="fas fa-medal"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">${activity.title}</div>
-                        <div class="activity-desc">${activity.description}</div>
-                        <div class="activity-meta">
-                            <span><i class="fas fa-clock"></i>${activity.date}</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-    }).join('');
-}
-
-// Load user reports
-function loadUserReports() {
-    const reportsList = document.getElementById('reportsList');
-    
-    reportsList.innerHTML = userReports.map(report => `
-        <div class="report-item">
-            <div class="report-header">
-                <div class="report-title">${report.siteName}</div>
-                <div class="report-emission ${report.emissionLevel}">
-                    ${report.carbon} tons/year
-                </div>
-            </div>
-            <div class="report-location">
-                <i class="fas fa-map-marker-alt"></i> ${report.location}
-            </div>
-            <div class="report-date">
-                <i class="fas fa-clock"></i> ${report.date}
-            </div>
-        </div>
-    `).join('');
-}
-
 // Open edit modal
 function openEditModal() {
-    document.getElementById('editName').value = currentUser.name;
-    document.getElementById('editBio').value = currentUser.bio;
-    document.getElementById('editAvatar').value = currentUser.avatar || '';
+    if (userData) {
+        document.getElementById('editName').value = userData.displayName || '';
+        document.getElementById('editBio').value = userData.bio || '';
+        document.getElementById('editAvatar').value = userData.photoURL || '';
+    }
     document.getElementById('editProfileModal').classList.add('active');
 }
 
@@ -360,47 +222,149 @@ function closeEditModal() {
 }
 
 // Save profile
-function saveProfile() {
-    const newName = document.getElementById('editName').value.trim();
-    const newBio = document.getElementById('editBio').value.trim();
-    const newAvatar = document.getElementById('editAvatar').value.trim();
+async function saveProfile() {
+    const name = document.getElementById('editName').value.trim();
+    const bio = document.getElementById('editBio').value.trim();
+    const avatar = document.getElementById('editAvatar').value.trim();
     
-    if (!newName) {
-        alert('Please enter your name');
+    if (!name) {
+        alert('Name is required');
         return;
     }
     
-    // Update demo user data
-    currentUser.name = newName;
-    currentUser.bio = newBio;
-    currentUser.avatar = newAvatar || null;
-    
-    // Reload profile display
-    loadUserProfile();
-    
-    // Close modal
-    closeEditModal();
-    
-    alert('Profile updated successfully!');
+    try {
+        // Update Firestore
+        await db.collection('users').doc(currentUser.uid).update({
+            displayName: name,
+            bio: bio,
+            photoURL: avatar || null
+        });
+        
+        // Update Auth profile
+        await currentUser.updateProfile({
+            displayName: name,
+            photoURL: avatar || null
+        });
+        
+        alert('Profile updated successfully!');
+        closeEditModal();
+        
+        // Reload profile
+        loadUserProfile();
+    } catch (error) {
+        console.error('Error saving profile:', error);
+        alert('Failed to save profile. Please try again.');
+    }
 }
 
 // Save settings
-function saveSettings() {
+async function saveSettings() {
     const emailNotifications = document.getElementById('emailNotifications').checked;
     const publicProfile = document.getElementById('publicProfile').checked;
     
-    alert(`Settings saved!\n\nEmail Notifications: ${emailNotifications ? 'Enabled' : 'Disabled'}\nPublic Profile: ${publicProfile ? 'Enabled' : 'Disabled'}`);
-}
-
-// Logout function - DISABLED FOR TESTING
-function logout() {
-    alert('Logout disabled in demo mode');
-}
-
-// Close modal on outside click
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('editProfileModal');
-    if (e.target === modal) {
-        closeEditModal();
+    try {
+        await db.collection('users').doc(currentUser.uid).update({
+            'settings.emailNotifications': emailNotifications,
+            'settings.publicProfile': publicProfile
+        });
+        
+        alert('Settings saved successfully!');
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        alert('Failed to save settings. Please try again.');
     }
-});
+}
+
+// View report
+function viewReport(reportId) {
+    window.location.href = `site-analysis.html?reportId=${reportId}`;
+}
+
+// Logout
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        auth.signOut().then(() => {
+            window.location.href = 'index.html';
+        });
+    }
+}
+
+// ==================== HELPER FUNCTIONS ====================
+
+function getInitials(name) {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function formatNumber(num) {
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
+}
+
+function formatDate(timestamp) {
+    if (!timestamp) return 'Unknown';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatTimestamp(timestamp) {
+    if (!timestamp) return 'Just now';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return formatDate(timestamp);
+}
+
+// ==================== MOCK DATA FOR TESTING ====================
+
+function loadMockProfile() {
+    const mockData = {
+        displayName: 'Demo User',
+        bio: 'Environmental advocate | Carbon monitoring enthusiast',
+        photoURL: null,
+        points: 1250,
+        rank: 23,
+        totalReports: 47,
+        verifiedReports: 38,
+        badgesEarned: 8,
+        totalBadges: 12,
+        badges: ['first-report', 'eco-warrior', 'top-contributor', 'carbon-detective', 'satellite-master', 'week-streak', 'month-streak', 'team-player'],
+        memberSince: { toDate: () => new Date('2024-08-15') },
+        settings: {
+            emailNotifications: true,
+            publicProfile: true
+        }
+    };
+    
+    userData = mockData;
+    displayUserProfile(mockData);
+    loadUserActivity(getMockActivity());
+    loadUserBadges(mockData.badges);
+    displayUserReports(getMockReports());
+}
+
+function getMockActivity() {
+    return [
+        { type: 'report', message: 'Reported Delhi Cement Plant', timestamp: { toDate: () => new Date(Date.now() - 3600000) }, points: 50, icon: 'flag' },
+        { type: 'badge', message: 'Earned "Eco Warrior" badge', timestamp: { toDate: () => new Date(Date.now() - 86400000) }, points: 100, icon: 'medal' },
+        { type: 'rank', message: 'Reached rank #23', timestamp: { toDate: () => new Date(Date.now() - 172800000) }, points: 0, icon: 'trophy' }
+    ];
+}
+
+function getMockReports() {
+    return [
+        { id: '1', siteName: 'Delhi Cement Plant', timestamp: { toDate: () => new Date(Date.now() - 86400000) }, carbonEstimate: 245, aiConfidence: 0.87, verified: true },
+        { id: '2', siteName: 'Mumbai Power Station', timestamp: { toDate: () => new Date(Date.now() - 172800000) }, carbonEstimate: 890, aiConfidence: 0.92, verified: true },
+        { id: '3', siteName: 'Bangalore Steel Factory', timestamp: { toDate: () => new Date(Date.now() - 259200000) }, carbonEstimate: 156, aiConfidence: 0.81, verified: false }
+    ];
+}
+
+console.log('Profile page loaded - Dynamic user profile');
