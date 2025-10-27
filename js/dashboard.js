@@ -2,6 +2,8 @@ console.log('📊 Dashboard.js loading...');
 
 let map, heatLayer;
 let isDemoMode = false;
+let currentUserData = null;
+let unsubscribeUser = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -30,13 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initTopNav();
     initHeatmap();
     
-    // Load data
-    console.log('📥 Loading dashboard data...');
-    loadDashboardData();
-    
-    // Setup real-time listeners
-    setupRealtimeListeners();
-    
     // Event listeners
     document.getElementById('timeFilter')?.addEventListener('change', loadTopContributors);
     document.getElementById('refreshHeatmap')?.addEventListener('click', loadHeatmapData);
@@ -51,12 +46,17 @@ function checkAuth() {
     
     auth.onAuthStateChanged(user => {
         if (!user) {
-            console.log('⚠️ No user logged in - using demo mode');
-            loadDemoMode();
-            isDemoMode = true;
+            console.log('⚠️ No user logged in - redirecting to login');
+            window.location.href = '../pages/login.html';
         } else {
             console.log('✅ User logged in:', user.email);
             loadUserInfo(user);
+            
+            // Load dashboard data after user is authenticated
+            loadDashboardData();
+            
+            // Setup real-time listeners
+            setupRealtimeListeners();
         }
     });
 }
@@ -64,73 +64,99 @@ function checkAuth() {
 function loadUserInfo(user) {
     console.log('👤 Loading user info for:', user.uid);
     
-    db.collection('users').doc(user.uid).get()
-        .then(doc => {
+    // Use real-time listener for user data
+    unsubscribeUser = db.collection('users').doc(user.uid)
+        .onSnapshot(doc => {
             if (doc.exists) {
-                const userData = doc.data();
-                console.log('✅ User data loaded:', userData);
-                
-                const displayName = userData.displayName || user.email;
-                const points = userData.points || 0;
-                const avatarUrl = userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=22c55e&color=fff`;
-                
-                // Update top nav with null checks
-                const userNameEl = document.getElementById('userName');
-                if (userNameEl) userNameEl.textContent = displayName;
-                
-                const userAvatarEl = document.getElementById('userAvatar');
-                if (userAvatarEl) {
-                    const imgEl = userAvatarEl.querySelector('img');
-                    if (imgEl) {
-                        imgEl.src = avatarUrl;
-                    } else {
-                        // Create img element if it doesn't exist
-                        const newImg = document.createElement('img');
-                        newImg.src = avatarUrl;
-                        newImg.alt = displayName;
-                        userAvatarEl.appendChild(newImg);
-                    }
-                }
-                
-                // Update sidebar with null checks
-                const sidebarUsernameEl = document.getElementById('sidebarUsername');
-                if (sidebarUsernameEl) sidebarUsernameEl.textContent = displayName;
-                
-                const sidebarPointsEl = document.getElementById('sidebarPoints');
-                if (sidebarPointsEl) sidebarPointsEl.textContent = `${formatNumber(points)} points`;
-                
-                const sidebarAvatarEl = document.getElementById('sidebarAvatar');
-                if (sidebarAvatarEl) {
-                    const imgEl = sidebarAvatarEl.querySelector('img');
-                    if (imgEl) {
-                        imgEl.src = avatarUrl;
-                    } else {
-                        // Create img element if it doesn't exist
-                        const newImg = document.createElement('img');
-                        newImg.src = avatarUrl;
-                        newImg.alt = displayName;
-                        sidebarAvatarEl.appendChild(newImg);
-                    }
-                }
+                currentUserData = { id: doc.id, ...doc.data() };
+                console.log('✅ User data loaded:', currentUserData.displayName);
+                updateUserUI();
+            } else {
+                console.error('❌ User document not found');
+                loadDemoMode();
             }
-        })
-        .catch(error => {
+        }, error => {
             console.error('❌ Error loading user:', error);
             loadDemoMode();
         });
 }
 
+function updateUserUI() {
+    if (!currentUserData) {
+        console.warn('⚠️ No user data available');
+        return;
+    }
+    
+    const displayName = currentUserData.displayName || currentUserData.email || 'User';
+    const points = currentUserData.points || 0;
+    const photoURL = currentUserData.photoURL;
+    
+    console.log('🎨 Updating UI for:', displayName, 'with', points, 'points');
+    
+    // Update sidebar user info (FIXED ELEMENT IDs)
+    const displayNameEl = document.getElementById('displayName');
+    if (displayNameEl) {
+        displayNameEl.textContent = displayName;
+        console.log('✅ Updated displayName');
+    } else {
+        console.warn('⚠️ displayName element not found');
+    }
+    
+    const userPointsEl = document.getElementById('userPoints');
+    if (userPointsEl) {
+        userPointsEl.textContent = `${formatNumber(points)} points`;
+        console.log('✅ Updated userPoints');
+    } else {
+        console.warn('⚠️ userPoints element not found');
+    }
+    
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) {
+        if (photoURL) {
+            userAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        } else {
+            userAvatarEl.innerHTML = getInitials(displayName);
+        }
+        console.log('✅ Updated userAvatar');
+    } else {
+        console.warn('⚠️ userAvatar element not found');
+    }
+    
+    // Also update top nav if elements exist
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) {
+        userNameEl.textContent = displayName;
+    }
+    
+    const topNavAvatarEl = document.getElementById('userAvatar');
+    if (topNavAvatarEl && photoURL) {
+        const imgEl = topNavAvatarEl.querySelector('img');
+        if (imgEl) {
+            imgEl.src = photoURL;
+        }
+    }
+}
+
+function getInitials(name) {
+    if (!name) return 'U';
+    return name.split(' ')
+        .map(n => n[0])
+        .join('')
+        .toUpperCase()
+        .substring(0, 2);
+}
+
 function loadDemoMode() {
     console.log('🎭 Loading demo mode');
     
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) userNameEl.textContent = 'Demo User';
+    const displayNameEl = document.getElementById('displayName');
+    if (displayNameEl) displayNameEl.textContent = 'Demo User';
     
-    const sidebarUsernameEl = document.getElementById('sidebarUsername');
-    if (sidebarUsernameEl) sidebarUsernameEl.textContent = 'Demo User';
+    const userPointsEl = document.getElementById('userPoints');
+    if (userPointsEl) userPointsEl.textContent = '1,250 points';
     
-    const sidebarPointsEl = document.getElementById('sidebarPoints');
-    if (sidebarPointsEl) sidebarPointsEl.textContent = '1,250 points';
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) userAvatarEl.innerHTML = 'DU';
 }
 
 // ============================================
@@ -157,13 +183,24 @@ function initTopNav() {
             return;
         }
         
+        logout();
+    });
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        // Cleanup listeners
+        if (unsubscribeUser) {
+            unsubscribeUser();
+        }
+        
         auth.signOut().then(() => {
             console.log('✅ Logged out');
-            window.location.href = 'index.html';
+            window.location.href = '../pages/login.html';
         }).catch(error => {
             console.error('❌ Logout error:', error);
         });
-    });
+    }
 }
 
 // ============================================
@@ -353,7 +390,7 @@ function loadMockReports() {
     
     reportsList.innerHTML = mockReports.map(report => `
         <div class="report-item">
-            <img src="https://via.placeholder.com/60" alt="Report" class="report-image">
+            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(report.site)}&background=22c55e&color=fff" alt="Report" class="report-image">
             <div class="report-content">
                 <div class="report-title">${report.site}</div>
                 <div class="report-meta">
@@ -385,12 +422,11 @@ async function loadTopContributors() {
         
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
-            if (userData.points > 0) { // Only include users with points
+            if (userData.points > 0) {
                 users.push(userData);
             }
         });
         
-        // Sort by points, display top 5
         users.sort((a, b) => (b.points || 0) - (a.points || 0));
         users = users.slice(0, 5);
         
@@ -471,7 +507,7 @@ function loadMockContributors() {
 }
 
 // ============================================
-// GLOBAL HEATMAP (still from sites)
+// GLOBAL HEATMAP
 // ============================================
 
 function initHeatmap() {
@@ -525,7 +561,6 @@ async function loadHeatmapData() {
                 if (lat && lng) {
                     const intensity = Math.min((site.carbonEstimate || 200) / 1000, 1);
                     heatData.push([lat, lng, intensity]);
-                    console.log(`✅ Added heatmap point: ${lat}, ${lng}`);
                 }
             }
         });
@@ -596,10 +631,8 @@ function setupRealtimeListeners() {
     
     console.log('👂 Setting up realtime listeners');
     
-    // Listen for changes in users collection (for new reports in recentActivity)
     db.collection('users')
         .onSnapshot(snapshot => {
-            // Refresh stats and reports when user data changes
             loadStatistics();
             loadRecentReports();
         }, error => {
@@ -640,5 +673,13 @@ function loadMockData() {
     loadMockContributors();
     loadMockHeatmap();
 }
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    console.log('🧹 Cleaning up listeners');
+    if (unsubscribeUser) {
+        unsubscribeUser();
+    }
+});
 
 console.log('✅ Dashboard.js loaded successfully');

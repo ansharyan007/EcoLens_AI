@@ -46,14 +46,14 @@
         </nav>
 
         <div class="user-info">
-            <div class="avatar" id="sidebarAvatar">
+            <div class="avatar" id="userAvatar">
                 <i class="fas fa-user"></i>
             </div>
             <div class="user-details">
-                <div class="username" id="sidebarUsername">Loading...</div>
-                <div class="points" id="sidebarPoints">0 points</div>
+                <p class="username" id="displayName">Loading...</p>
+                <p class="points" id="userPoints">0 points</p>
             </div>
-            <button class="logout-btn" id="logoutBtn" title="Logout">
+            <button class="logout-btn" onclick="logout()" title="Logout">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
@@ -77,10 +77,10 @@
                     <i class="fas fa-bell"></i>
                     <span class="badge" id="notifBadge">3</span>
                 </div>
-                <div class="user-avatar" id="userAvatar">
+                <div class="user-avatar" id="topNavAvatar">
                     <i class="fas fa-user"></i>
                 </div>
-                <span class="username" id="userName">Loading...</span>
+                <span class="username" id="topNavUserName">Loading...</span>
             </div>
         </header>
 

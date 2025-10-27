@@ -42,6 +42,9 @@ async function loadUserProfile(userId) {
                         currentStreak: currentUserData.currentStreak
                     });
                     
+                    // Update sidebar FIRST
+                    updateSidebarUI();
+                    
                     // Display all profile sections
                     displayProfileInfo(currentUserData);
                     displayStats(currentUserData);
@@ -61,6 +64,52 @@ async function loadUserProfile(userId) {
     } catch (error) {
         console.error('❌ Error setting up profile listener:', error);
         showError('Failed to initialize profile: ' + error.message);
+    }
+}
+
+// ==================== UPDATE SIDEBAR UI ====================
+
+function updateSidebarUI() {
+    if (!currentUserData) {
+        console.warn('⚠️ No user data available for sidebar');
+        return;
+    }
+    
+    const displayName = currentUserData.displayName || 'User';
+    const points = currentUserData.points || 0;
+    const photoURL = currentUserData.photoURL;
+    
+    console.log('🎨 Updating sidebar for:', displayName, 'with', points, 'points');
+    
+    // Update sidebar display name
+    const displayNameEl = document.getElementById('displayName');
+    if (displayNameEl) {
+        displayNameEl.textContent = displayName;
+        console.log('✅ Updated sidebar displayName');
+    } else {
+        console.warn('⚠️ displayName element not found');
+    }
+    
+    // Update sidebar points
+    const userPointsEl = document.getElementById('userPoints');
+    if (userPointsEl) {
+        userPointsEl.textContent = `${points.toLocaleString()} points`;
+        console.log('✅ Updated sidebar userPoints');
+    } else {
+        console.warn('⚠️ userPoints element not found');
+    }
+    
+    // Update sidebar avatar
+    const userAvatarEl = document.getElementById('userAvatar');
+    if (userAvatarEl) {
+        if (photoURL) {
+            userAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        } else {
+            userAvatarEl.innerHTML = getInitials(displayName);
+        }
+        console.log('✅ Updated sidebar userAvatar');
+    } else {
+        console.warn('⚠️ userAvatar element not found');
     }
 }
 
@@ -96,7 +145,7 @@ async function createDefaultProfile(userId) {
                     icon: "user-plus"
                 }
             ],
-            challengeProgress: {}, // For leaderboard challenges
+            challengeProgress: {},
             settings: {
                 emailNotifications: true,
                 publicProfile: true,
@@ -175,25 +224,18 @@ function displayProfileInfo(userData) {
         document.getElementById('memberSince').textContent = 'Recently';
     }
     
-    // Avatar
+    // Profile Avatar (main page avatar, not sidebar)
     const photoURL = userData.photoURL;
     const displayName = userData.displayName || 'User';
     
-    const avatarElements = document.querySelectorAll('#profileAvatar, #userAvatar');
-    avatarElements.forEach(elem => {
+    const profileAvatarEl = document.getElementById('profileAvatar');
+    if (profileAvatarEl) {
         if (photoURL) {
-            elem.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            profileAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
         } else {
-            elem.innerHTML = getInitials(displayName);
+            profileAvatarEl.innerHTML = getInitials(displayName);
         }
-    });
-    
-    // Sidebar info
-    const displayNameEl = document.getElementById('displayName');
-    const userPointsEl = document.getElementById('userPoints');
-    
-    if (displayNameEl) displayNameEl.textContent = displayName;
-    if (userPointsEl) userPointsEl.textContent = `${userData.points || 0} points`;
+    }
 }
 
 // Display stats
