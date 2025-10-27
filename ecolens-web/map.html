@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Explorer - EcoLens AI</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/map.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <div>
+                <h2>EcoLens AI</h2>
+                <p>Carbon Monitor</p>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="map.html" class="nav-link active">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Map Explorer</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <i class="fas fa-trophy"></i>
+                <span>Leaderboard</span>
+            </a>
+            <a href="profile.html" class="nav-link">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <div class="user-info">
+            <div class="avatar" id="userAvatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-details">
+                <p class="username" id="displayName">Loading...</p>
+                <p class="points" id="userPoints">0 points</p>
+            </div>
+            <button onclick="logout()" class="logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="map-container">
+        <!-- Map Sidebar -->
+        <div class="map-sidebar">
+            <div class="sidebar-header">
+                <h2>Map Explorer</h2>
+                <p>Explore industrial sites globally</p>
+            </div>
+
+            <!-- Search -->
+            <div class="search-container">
+                <i class="fas fa-search"></i>
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search location or coordinates..."
+                    onkeyup="filterSites()"
+                >
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-container">
+                <label>Filter by emission:</label>
+                <select id="emissionFilter" onchange="filterSites()">
+                    <option value="all">All Sites</option>
+                    <option value="low">Low (&lt; 100 tons/year)</option>
+                    <option value="medium">Medium (100-300 tons/year)</option>
+                    <option value="high">High (&gt; 300 tons/year)</option>
+                </select>
+            </div>
+
+            <!-- Sites List -->
+            <div class="sites-list" id="sitesList">
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading sites...</p>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="legend">
+                <h3>Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #22c55e;"></div>
+                    <span>Low (&lt; 100 tons/year)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #eab308;"></div>
+                    <span>Medium (100-300 tons/year)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>High (&gt; 300 tons/year)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Area -->
+        <div class="map-area">
+            <div id="map"></div>
+
+            <!-- Add Site Button -->
+            <button class="add-site-btn" onclick="enableAddMode()" title="Click map to add new site">
+                <i class="fas fa-plus"></i>
+            </button>
+
+            <!-- Add Mode Indicator -->
+            <div id="addModeIndicator" class="add-mode-indicator" style="display: none;">
+                <i class="fas fa-map-pin"></i>
+                <span>Click on the map to add a new site</span>
+                <button onclick="disableAddMode()">Cancel</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Site Modal -->
+    <div id="addSiteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Site</h2>
+                <button class="close-btn" onclick="closeAddSiteModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="modalLocation" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Site Name (Optional)</label>
+                    <input type="text" id="modalSiteName" placeholder="e.g., Delhi Cement Plant">
+                </div>
+                <div class="form-group">
+                    <label>Facility Type</label>
+                    <select id="modalFacilityType">
+                        <option value="cement">Cement Plant</option>
+                        <option value="steel">Steel Factory</option>
+                        <option value="power">Power Plant</option>
+                        <option value="refinery">Oil Refinery</option>
+                        <option value="chemical">Chemical Plant</option>
+                        <option value="other">Other Industrial</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="modalNotes" placeholder="Any additional information..."></textarea>
+                </div>
+                <div class="analyzing-state" id="analyzingState" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Analyzing location with AI...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAddSiteModal()">Cancel</button>
+                <button class="btn-primary" onclick="submitNewSite()">
+                    <i class="fas fa-check"></i> Add Site
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/map.js"></script>
+</body>
+</html>
