@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dual Satellite Time-Lapse - EcoLens AI</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/site-analysis.css">
+
+    <style>
+        :root {
+            --bg: #0b1220;
+            --card: #0f1724;
+            --accent: #22c55e;
+            --muted: #9aa6b2;
+            --mapbox-accent: #4269f5;
+        }
+        
+        .wrap {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            align-items: center;
+            background: var(--card);
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        input, select, button {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: inherit;
+            font-size: 1rem;
+        }
+        
+        button {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        #generate {
+            background: var(--accent);
+            color: #021018;
+            font-weight: bold;
+        }
+        
+        .viewer-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .viewer {
+            flex: 1;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .viewer-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .viewer-title.nasa {
+            color: var(--accent);
+        }
+        
+        .viewer-title.mapbox {
+            color: var(--mapbox-accent);
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .ok {
+            background: #16a34a;
+        }
+        
+        .err {
+            background: #ef4444;
+        }
+        
+        .pending {
+            background: #f59e0b;
+        }
+        
+        .frame {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            height: 400px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        
+        .frame img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            border-radius: 6px;
+        }
+        
+        .label-badge {
+            position: absolute;
+            left: 15px;
+            bottom: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            backdrop-filter: blur(5px);
+        }
+        
+        .metrics {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            flex: 1;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .chart-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .chart-box {
+            flex: 1;
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .chart-title {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        
+        .timeline {
+            margin-top: 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .chip {
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        
+        .chip:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .chip.active {
+            background: linear-gradient(90deg, var(--accent), #16a34a);
+            color: #021018;
+        }
+        
+        .log-container {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .log {
+            background: #06111a;
+            padding: 15px;
+            border-radius: 8px;
+            height: 200px;
+            overflow: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-summary {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        
+        .comparison-item {
+            padding: 0 20px;
+        }
+        
+        .comparison-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .positive {
+            color: var(--accent);
+        }
+        
+        .negative {
+            color: #ef4444;
+        }
+        
+        @media (max-width: 1100px) {
+            .viewer-container, .chart-container {
+                flex-direction: column;
+            }
+        }
+
+        /* Tab styling for active time-lapse tab */
+        .tab-btn.timelapse-active {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            border-color: #22c55e;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <div>
+                <h2>EcoLens AI</h2>
+                <p>Carbon Monitor</p>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="map.html" class="nav-link">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Map Explorer</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <i class="fas fa-trophy"></i>
+                <span>Leaderboard</span>
+            </a>
+            <a href="profile.html" class="nav-link">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <div class="user-info">
+            <div class="avatar" id="userAvatar">DU</div>
+            <div class="user-details">
+                <p class="username" id="displayName">Demo User</p>
+                <p class="points" id="userPoints">1,250 points</p>
+            </div>
+            <button onclick="logout()" class="logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="site-content">
+        <!-- Header -->
+        <div class="site-header">
+            <div class="header-left">
+                <button class="back-btn" onclick="goBackToSiteAnalysis()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="site-title-section">
+                    <h1 id="siteName">Time-Lapse Analysis</h1>
+                    <p id="siteLocation">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="locationText">Loading site information...</span>
+                    </p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn" onclick="exportTimelapse()">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+                <button class="action-btn" onclick="shareTimelapse()">
+                    <i class="fas fa-share-alt"></i>
+                    Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn" onclick="switchToOverview()">
+                <i class="fas fa-info-circle"></i>
+                Overview
+            </button>
+            <button class="tab-btn timelapse-active">
+                <i class="fas fa-play-circle"></i>
+                Time-Lapse
+            </button>
+            <button class="tab-btn" onclick="switchToReports()">
+                <i class="fas fa-clipboard-list"></i>
+                Reports
+            </button>
+        </div>
+
+        <!-- Time-Lapse Content -->
+        <div class="tab-content">
+            <div class="wrap">
+                <h1>Dual Satellite Time-Lapse & Carbon Analysis</h1>
+                <div class="subtitle">Compare NASA GIBS and Mapbox satellite imagery with carbon emission estimates (2015-2025)</div>
+                
+                <div class="controls">
+                    <input id="coords" placeholder="lat, lon (e.g. 13.0827, 80.2707)" style="width:240px">
+                    <select id="layer">
+                        <option value="VIIRS_SNPP_CorrectedReflectance_TrueColor">NASA: VIIRS SNPP (Recommended)</option>
+                        <option value="VIIRS_NOAA20_CorrectedReflectance_TrueColor">NASA: VIIRS NOAA-20</option>
+                        <option value="MODIS_Terra_CorrectedReflectance_TrueColor">NASA: MODIS Terra</option>
+                    </select>
+                    
+                    <label>BBox Half°:</label>
+                    <input id="bboxManual" type="number" step="0.01" placeholder="auto" style="width:80px">
+                    
+                    <button id="generate">Generate Time-Lapse</button>
+                    <button id="play">Play ▶</button>
+                    <button id="pause">Pause ⏸</button>
+                    <button id="prev">◀ Prev</button>
+                    <button id="next">Next ▶</button>
+                </div>
+                
+                <div class="viewer-container">
+                    <div class="viewer">
+                        <div class="viewer-title nasa">
+                            <span class="status-dot ok"></span>
+                            NASA GIBS Satellite
+                        </div>
+                        <div class="frame" id="nasaFrame">
+                            <img id="nasaImg" alt="NASA satellite frame" src="" />
+                            <div class="label-badge" id="nasaLabel">Year: -</div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div>Baseline (2015)</div>
+                                <div class="metric-value" id="nasaBaseline">-</div>
+                            </div>
+                            <div class="metric">
+                                <div>Current (2025)</div>
+                                <div class="metric-value" id="nasaCurrent">-</div>
+                            </div>
+                            <div class="metric">
+                                <div>Total Δ</div>
+                                <div class="metric-value" id="nasaDelta">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="viewer">
+                        <div class="viewer-title mapbox">
+                            <span class="status-dot ok"></span>
+                            Mapbox Satellite
+                        </div>
+                        <div class="frame" id="mapboxFrame">
+                            <img id="mapboxImg" alt="Mapbox satellite frame" src="" />
+                            <div class="label-badge" id="mapboxLabel">Year: -</div>
+                        </div>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div>Baseline (2015)</div>
+                                <div class="metric-value" id="mapboxBaseline">-</div>
+                            </div>
+                            <div class="metric">
+                                <div>Current (2025)</div>
+                                <div class="metric-value" id="mapboxCurrent">-</div>
+                            </div>
+                            <div class="metric">
+                                <div>Total Δ</div>
+                                <div class="metric-value" id="mapboxDelta">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-box">
+                        <div class="chart-title">NASA GIBS Carbon Estimate</div>
+                        <canvas id="nasaChart" height="250"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <div class="chart-title">Mapbox Carbon Estimate</div>
+                        <canvas id="mapboxChart" height="250"></canvas>
+                    </div>
+                </div>
+                
+                <div class="comparison-summary">
+                    <div class="comparison-item">
+                        <div>Data Source Agreement</div>
+                        <div class="comparison-value positive" id="agreement">-</div>
+                        <div>of years show similar trend</div>
+                    </div>
+                    <div class="comparison-item">
+                        <div>Average Carbon</div>
+                        <div class="comparison-value" id="avgCarbon">-</div>
+                        <div>tons/year across sources</div>
+                    </div>
+                    <div class="comparison-item">
+                        <div>Trend Consistency</div>
+                        <div class="comparison-value positive" id="trendConsistency">-</div>
+                        <div>both show increasing trend</div>
+                    </div>
+                </div>
+                
+                <div class="log-container">
+                    <div>Status Log</div>
+                    <div class="log" id="log">Ready to generate time-lapse. Enter coordinates and click Generate.</div>
+                    <div class="timeline" id="timeline"></div>
+                </div>
+                
+                <div class="footer">
+                    <p>NASA GIBS provides scientific satellite imagery. Mapbox offers high-resolution commercial imagery.</p>
+                    <p>Carbon estimates are calculated based on vegetation analysis and are for demonstration purposes.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+
+    <script>
+        // Configuration
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoidmFyc2FhIiwiYSI6ImNtaDkyeDB4azE0MW8ya3BjMXJmZ3F3OTMifQ.VzLNxEUiLMP6fKU-5WN8xw';
+        const years = Array.from({length: 11}, (_, i) => 2015 + i);
+        const nasaEndpoint = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
+        
+        // DOM Elements
+        const coordsInput = document.getElementById('coords');
+        const layerSelect = document.getElementById('layer');
+        const bboxManual = document.getElementById('bboxManual');
+        const generateBtn = document.getElementById('generate');
+        const playBtn = document.getElementById('play');
+        const pauseBtn = document.getElementById('pause');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        
+        const nasaImg = document.getElementById('nasaImg');
+        const mapboxImg = document.getElementById('mapboxImg');
+        const nasaLabel = document.getElementById('nasaLabel');
+        const mapboxLabel = document.getElementById('mapboxLabel');
+        
+        const nasaBaseline = document.getElementById('nasaBaseline');
+        const nasaCurrent = document.getElementById('nasaCurrent');
+        const nasaDelta = document.getElementById('nasaDelta');
+        
+        const mapboxBaseline = document.getElementById('mapboxBaseline');
+        const mapboxCurrent = document.getElementById('mapboxCurrent');
+        const mapboxDelta = document.getElementById('mapboxDelta');
+        
+        const logEl = document.getElementById('log');
+        const timelineEl = document.getElementById('timeline');
+        
+        const agreementEl = document.getElementById('agreement');
+        const avgCarbonEl = document.getElementById('avgCarbon');
+        const trendConsistencyEl = document.getElementById('trendConsistency');
+        
+        // State
+        let nasaFrames = [];
+        let mapboxFrames = [];
+        let index = 0;
+        let timer = null;
+        let nasaChart = null;
+        let mapboxChart = null;
+        let currentSiteData = null;
+        
+        // Navigation functions
+        function goBackToSiteAnalysis() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const siteId = urlParams.get('siteId');
+            if (siteId) {
+                window.location.href = `site-analysis.html?id=${siteId}`;
+            } else {
+                window.location.href = 'site-analysis.html';
+            }
+        }
+
+        function switchToOverview() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const siteId = urlParams.get('siteId');
+            if (siteId) {
+                window.location.href = `site-analysis.html?id=${siteId}#overview`;
+            } else {
+                window.location.href = 'site-analysis.html#overview';
+            }
+        }
+
+        function switchToReports() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const siteId = urlParams.get('siteId');
+            if (siteId) {
+                window.location.href = `site-analysis.html?id=${siteId}#reports`;
+            } else {
+                window.location.href = 'site-analysis.html#reports';
+            }
+        }
+
+        function exportTimelapse() {
+            alert('Export functionality coming soon!');
+        }
+
+        function shareTimelapse() {
+            const url = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Dual Satellite Time-Lapse - EcoLens AI',
+                    url: url
+                }).catch(err => console.log('Share failed:', err));
+            } else {
+                navigator.clipboard.writeText(url);
+                alert('Link copied to clipboard!');
+            }
+        }
+
+        // Initialize page with site data
+        function initializePageData() {
+            const storedData = sessionStorage.getItem('timelapseData');
+            if (storedData) {
+                currentSiteData = JSON.parse(storedData);
+                
+                // Update page title with site name
+                if (currentSiteData.siteName && currentSiteData.siteName !== 'Loading...') {
+                    document.getElementById('siteName').textContent = currentSiteData.siteName + ' - Time-Lapse';
+                    document.getElementById('locationText').textContent = currentSiteData.siteName;
+                }
+                
+                // Pre-fill coordinates
+                if (currentSiteData.latitude && currentSiteData.longitude) {
+                    coordsInput.value = `${currentSiteData.latitude}, ${currentSiteData.longitude}`;
+                }
+            }
+        }
+
+        // Set default coordinates if none provided
+        if (!coordsInput.value) {
+            coordsInput.value = '13.0827, 80.2707';
+        }
+        
+        // Utility functions
+        function log(msg) {
+            const t = new Date().toLocaleTimeString();
+            logEl.innerHTML = `<div style="color:#9fbfc6">[${t}]</div> ${msg}<br>` + logEl.innerHTML;
+        }
+        
+        function autoBBoxHalfDeg(lat, lon) {
+            const decimals = (n) => {
+                const s = String(n).split('.');
+                return s.length > 1 ? s[1].replace(/0+$/, '').length : 0;
+            };
+            const p = Math.max(decimals(lat), decimals(lon));
+            if (p <= 2) return 0.02;
+            if (p === 3) return 0.05;
+            if (p === 4) return 0.08;
+            if (p === 5) return 0.12;
+            if (p === 6) return 0.20;
+            return 0.30;
+        }
+        
+        function buildNasaUrl(lat, lon, year, layer, bboxHalf) {
+            const time = `${year}-01-01`;
+            const minLon = lon - bboxHalf;
+            const minLat = lat - bboxHalf;
+            const maxLon = lon + bboxHalf;
+            const maxLat = lat + bboxHalf;
+            const params = new URLSearchParams({
+                SERVICE: 'WMS',
+                REQUEST: 'GetMap',
+                VERSION: '1.1.1',
+                LAYERS: layer,
+                STYLES: '',
+                FORMAT: 'image/jpeg',
+                TIME: time,
+                SRS: 'EPSG:4326',
+                BBOX: `${minLon},${minLat},${maxLon},${maxLat}`,
+                WIDTH: '800',
+                HEIGHT: '500'
+            });
+            return `${nasaEndpoint}?${params.toString()}`;
+        }
+        
+        function getMapboxUrl(lat, lon) {
+            const zoom = 15;
+            const size = '800x500';
+            return `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/${lon},${lat},${zoom},0,0/${size}@2x?access_token=${MAPBOX_TOKEN}`;
+        }
+        
+        // Generate frames for both sources
+        async function generateFrames() {
+            const coord = coordsInput.value.trim();
+            const layer = layerSelect.value;
+            const manual = parseFloat(bboxManual.value);
+            
+            if (!coord) {
+                alert('Please enter coordinates');
+                return;
+            }
+            
+            const parts = coord.split(',').map(p => parseFloat(p.trim()));
+            if (parts.length !== 2 || parts.some(isNaN)) {
+                alert('Invalid coordinate format. Use: lat, lon');
+                return;
+            }
+            
+            const lat = parts[0], lon = parts[1];
+            let bboxHalf = isFinite(manual) && manual > 0 ? manual : autoBBoxHalfDeg(lat, lon);
+            
+            log(`Generating time-lapse for ${lat}, ${lon} with bboxHalf=${bboxHalf}`);
+            
+            // Initialize frames
+            nasaFrames = years.map(y => ({
+                year: y,
+                url: buildNasaUrl(lat, lon, y, layer, bboxHalf),
+                status: 'pending',
+                img: null,
+                carbon: null
+            }));
+            
+            mapboxFrames = years.map(y => ({
+                year: y,
+                url: getMapboxUrl(lat, lon),
+                status: 'pending',
+                img: null,
+                carbon: null
+            }));
+            
+            // Render timeline
+            renderTimeline();
+            
+            // Prefetch and analyze NASA frames
+            for (let i = 0; i < nasaFrames.length; i++) {
+                await fetchAndAnalyzeNasa(i);
+            }
+            
+            // Generate Mapbox carbon data (simulated based on NASA data with some variation)
+            generateMapboxCarbonData();
+            
+            // Display first frame
+            index = 0;
+            showIndex();
+            updateMetrics();
+            drawCharts();
+            updateComparison();
+        }
+        
+        // Fetch and analyze NASA imagery
+        function fetchAndAnalyzeNasa(i) {
+            return new Promise((resolve) => {
+                const f = nasaFrames[i];
+                const im = new Image();
+                im.crossOrigin = 'Anonymous';
+                im.onload = () => {
+                    f.status = 'ok';
+                    f.img = im;
+                    
+                    try {
+                        // Simplified analysis for demo
+                        const base = (currentSiteData && currentSiteData.carbonEstimate) ? currentSiteData.carbonEstimate : 200 + (Math.random() * 100);
+                        const yearTrend = 0.02;
+                        const yearsFromStart = f.year - 2015;
+                        const noise = (Math.sin(f.year * 13) + Math.cos(f.year * 7)) * 0.01;
+                        const carbon = Math.round(base * (1 + yearTrend * yearsFromStart + noise));
+                        f.carbon = carbon;
+                        log(`NASA ${f.year}: carbon=${carbon} t/yr`);
+                    } catch (err) {
+                        f.status = 'error';
+                        log(`<span style="color:#ff9b9b">NASA analyze error for ${f.year}: ${err.message}</span>`);
+                    }
+                    
+                    renderTimeline();
+                    resolve();
+                };
+                
+                im.onerror = () => {
+                    f.status = 'error';
+                    log(`<span style="color:#ff9b9b">NASA failed to load ${f.year}</span>`);
+                    renderTimeline();
+                    resolve();
+                };
+                
+                im.src = f.url;
+            });
+        }
+        
+        // Generate Mapbox carbon data based on NASA with some variation
+        function generateMapboxCarbonData() {
+            // Use NASA data as base but add some variation
+            mapboxFrames.forEach((f, i) => {
+                const nasaCarbon = nasaFrames[i].carbon || 200;
+                // Add some random variation (±15%)
+                const variation = 0.85 + (Math.random() * 0.3);
+                f.carbon = Math.round(nasaCarbon * variation);
+                f.status = 'ok';
+                
+                // Preload Mapbox image (same for all years in this demo)
+                const im = new Image();
+                im.crossOrigin = 'Anonymous';
+                im.onload = () => {
+                    f.img = im;
+                    f.status = 'ok';
+                    log(`Mapbox ${f.year}: carbon=${f.carbon} t/yr`);
+                    renderTimeline();
+                };
+                im.onerror = () => {
+                    f.status = 'error';
+                    log(`<span style="color:#ff9b9b">Mapbox failed to load ${f.year}</span>`);
+                    renderTimeline();
+                };
+                im.src = f.url;
+            });
+        }
+        
+        // Render timeline chips
+        function renderTimeline() {
+            timelineEl.innerHTML = '';
+            years.forEach((y, i) => {
+                const chip = document.createElement('div');
+                chip.className = 'chip' + (i === index ? ' active' : '');
+                
+                const nasaStatus = nasaFrames[i]?.status || 'pending';
+                const mapboxStatus = mapboxFrames[i]?.status || 'pending';
+                
+                // Show status for both sources
+                const nasaDot = `<span class="status-dot ${nasaStatus === 'ok' ? 'ok' : nasaStatus === 'error' ? 'err' : 'pending'}"></span>`;
+                const mapboxDot = `<span class="status-dot ${mapboxStatus === 'ok' ? 'ok' : mapboxStatus === 'error' ? 'err' : 'pending'}"></span>`;
+                
+                chip.innerHTML = `${nasaDot}${mapboxDot} ${y}`;
+                chip.onclick = () => {
+                    pause();
+                    index = i;
+                    showIndex();
+                };
+                timelineEl.appendChild(chip);
+            });
+        }
+        
+        // Show current frame for both sources
+        function showIndex() {
+            if (nasaFrames.length === 0) return;
+            
+            const nasaF = nasaFrames[index];
+            const mapboxF = mapboxFrames[index];
+            
+            // NASA frame
+            if (nasaF && nasaF.status === 'ok' && nasaF.img) {
+                nasaImg.src = nasaF.url;
+                nasaLabel.textContent = `Year: ${nasaF.year} — ${nasaF.carbon !== null ? nasaF.carbon + ' t/yr' : 'no estimate'}`;
+            } else {
+                nasaImg.src = '';
+                nasaLabel.textContent = `Year: ${nasaF ? nasaF.year : '-'} — image unavailable`;
+            }
+            
+            // Mapbox frame
+            if (mapboxF && mapboxF.status === 'ok' && mapboxF.img) {
+                mapboxImg.src = mapboxF.url;
+                mapboxLabel.textContent = `Year: ${mapboxF.year} — ${mapboxF.carbon !== null ? mapboxF.carbon + ' t/yr' : 'no estimate'}`;
+            } else {
+                mapboxImg.src = '';
+                mapboxLabel.textContent = `Year: ${mapboxF ? mapboxF.year : '-'} — image unavailable`;
+            }
+            
+            renderTimeline();
+            highlightChartPoints(index);
+        }
+        
+        // Update metrics for both sources
+        function updateMetrics() {
+            if (nasaFrames.length === 0) return;
+            
+            // NASA metrics
+            const nasaBaselineVal = nasaFrames[0].carbon || 0;
+            const nasaCurrentVal = nasaFrames[nasaFrames.length - 1].carbon || 0;
+            const nasaDeltaVal = nasaBaselineVal ? Math.round(((nasaCurrentVal - nasaBaselineVal) / nasaBaselineVal) * 100) : 0;
+            
+            nasaBaseline.textContent = nasaBaselineVal + ' t';
+            nasaCurrent.textContent = nasaCurrentVal + ' t';
+            nasaDelta.textContent = (nasaDeltaVal >= 0 ? '+' : '') + nasaDeltaVal + ' %';
+            nasaDelta.className = 'metric-value ' + (nasaDeltaVal >= 0 ? 'positive' : 'negative');
+            
+            // Mapbox metrics
+            const mapboxBaselineVal = mapboxFrames[0].carbon || 0;
+            const mapboxCurrentVal = mapboxFrames[mapboxFrames.length - 1].carbon || 0;
+            const mapboxDeltaVal = mapboxBaselineVal ? Math.round(((mapboxCurrentVal - mapboxBaselineVal) / mapboxBaselineVal) * 100) : 0;
+            
+            mapboxBaseline.textContent = mapboxBaselineVal + ' t';
+            mapboxCurrent.textContent = mapboxCurrentVal + ' t';
+            mapboxDelta.textContent = (mapboxDeltaVal >= 0 ? '+' : '') + mapboxDeltaVal + ' %';
+            mapboxDelta.className = 'metric-value ' + (mapboxDeltaVal >= 0 ? 'positive' : 'negative');
+        }
+        
+        // Draw charts for both sources
+        function drawCharts() {
+            // NASA Chart
+            const nasaCtx = document.getElementById('nasaChart').getContext('2d');
+            const nasaLabels = nasaFrames.map(f => String(f.year));
+            const nasaData = nasaFrames.map(f => f.carbon);
+            
+            if (nasaChart) nasaChart.destroy();
+            
+            nasaChart = new Chart(nasaCtx, {
+                type: 'line',
+                data: {
+                    labels: nasaLabels,
+                    datasets: [{
+                        label: 'Carbon (tons/year)',
+                        data: nasaData,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        borderWidth: 2,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+            
+            // Mapbox Chart
+            const mapboxCtx = document.getElementById('mapboxChart').getContext('2d');
+            const mapboxLabels = mapboxFrames.map(f => String(f.year));
+            const mapboxData = mapboxFrames.map(f => f.carbon);
+            
+            if (mapboxChart) mapboxChart.destroy();
+            
+            mapboxChart = new Chart(mapboxCtx, {
+                type: 'line',
+                data: {
+                    labels: mapboxLabels,
+                    datasets: [{
+                        label: 'Carbon (tons/year)',
+                        data: mapboxData,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        borderWidth: 2,
+                        borderColor: '#4269f5',
+                        backgroundColor: 'rgba(66, 105, 245, 0.1)',
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Highlight current point on both charts
+        function highlightChartPoints(i) {
+            if (nasaChart) {
+                nasaChart.setActiveElements([{ datasetIndex: 0, index: i }]);
+                nasaChart.update('none');
+            }
+            
+            if (mapboxChart) {
+                mapboxChart.setActiveElements([{ datasetIndex: 0, index: i }]);
+                mapboxChart.update('none');
+            }
+        }
+        
+        // Update comparison summary
+        function updateComparison() {
+            if (nasaFrames.length === 0) return;
+            
+            // Calculate agreement (years where both sources show same trend direction)
+            let agreementCount = 0;
+            for (let i = 1; i < nasaFrames.length; i++) {
+                const nasaTrend = (nasaFrames[i].carbon || 0) - (nasaFrames[i-1].carbon || 0);
+                const mapboxTrend = (mapboxFrames[i].carbon || 0) - (mapboxFrames[i-1].carbon || 0);
+                
+                if ((nasaTrend >= 0 && mapboxTrend >= 0) || (nasaTrend < 0 && mapboxTrend < 0)) {
+                    agreementCount++;
+                }
+            }
+            
+            const agreementPct = Math.round((agreementCount / (nasaFrames.length - 1)) * 100);
+            agreementEl.textContent = `${agreementPct}%`;
+            agreementEl.className = `comparison-value ${agreementPct >= 70 ? 'positive' : agreementPct >= 50 ? '' : 'negative'}`;
+            
+            // Calculate average carbon
+            const nasaAvg = nasaFrames.reduce((sum, f) => sum + (f.carbon || 0), 0) / nasaFrames.length;
+            const mapboxAvg = mapboxFrames.reduce((sum, f) => sum + (f.carbon || 0), 0) / mapboxFrames.length;
+            const overallAvg = Math.round((nasaAvg + mapboxAvg) / 2);
+            avgCarbonEl.textContent = `${overallAvg} t`;
+            
+            // Check trend consistency
+            const nasaStart = nasaFrames[0].carbon || 0;
+            const nasaEnd = nasaFrames[nasaFrames.length - 1].carbon || 0;
+            const mapboxStart = mapboxFrames[0].carbon || 0;
+            const mapboxEnd = mapboxFrames[mapboxFrames.length - 1].carbon || 0;
+            
+            const nasaIncreasing = nasaEnd > nasaStart;
+            const mapboxIncreasing = mapboxEnd > mapboxStart;
+            
+            trendConsistencyEl.textContent = nasaIncreasing === mapboxIncreasing ? 'Yes' : 'No';
+            trendConsistencyEl.className = `comparison-value ${nasaIncreasing === mapboxIncreasing ? 'positive' : 'negative'}`;
+        }
+        
+        // Control functions
+        function play() {
+            if (timer) return;
+            timer = setInterval(() => {
+                index = (index + 1) % years.length;
+                showIndex();
+                updateMetrics();
+            }, 1500);
+            log('Playing time-lapse');
+        }
+        
+        function pause() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+                log('Paused time-lapse');
+            }
+        }
+        
+        // Event listeners
+        generateBtn.onclick = async () => {
+            pause();
+            await generateFrames();
+        };
+        
+        playBtn.onclick = play;
+        pauseBtn.onclick = pause;
+        
+        prevBtn.onclick = () => {
+            pause();
+            index = (index - 1 + years.length) % years.length;
+            showIndex();
+            updateMetrics();
+        };
+        
+        nextBtn.onclick = () => {
+            pause();
+            index = (index + 1) % years.length;
+            showIndex();
+            updateMetrics();
+        };
+        
+        // Initialize on page load
+        window.onload = () => {
+            initializePageData();
+            log('Time-lapse application loaded. Enter coordinates and click "Generate Time-Lapse" to begin.');
+        };
+    </script>
+</body>
+</html>

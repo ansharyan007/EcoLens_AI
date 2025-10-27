@@ -93,7 +93,7 @@
                 <i class="fas fa-info-circle"></i>
                 Overview
             </button>
-            <button class="tab-btn" onclick="switchTab('timelapse')">
+            <button class="tab-btn" onclick="openTimelapsePage()">
                 <i class="fas fa-play-circle"></i>
                 Time-Lapse
             </button>
@@ -151,7 +151,7 @@
                     </div>
                 </div>
 
-                <!-- Images Section - UPDATED -->
+                <!-- Images Section -->
                 <div class="images-section">
                     <div class="image-card" id="groundImageCard">
                         <h3><i class="fas fa-street-view"></i> Ground View</h3>
@@ -227,101 +227,10 @@
                         <i class="fas fa-map"></i>
                         View on Map
                     </button>
-                    <button class="btn-secondary" onclick="switchTab('timelapse')">
+                    <button class="btn-secondary" onclick="openTimelapsePage()">
                         <i class="fas fa-play"></i>
                         Generate Time-Lapse
                     </button>
-                </div>
-            </div>
-
-            <!-- Time-Lapse Tab -->
-            <div id="timelapse-tab" class="tab-panel">
-                <div class="timelapse-container">
-                    <h2>10-Year Carbon Emission Time-Lapse</h2>
-                    <p class="timelapse-subtitle">Satellite imagery analysis from 2015 to 2025</p>
-
-                    <!-- Time-Lapse Viewer -->
-                    <div class="timelapse-viewer">
-                        <div class="timelapse-image-container">
-                            <img id="timelapseImage" src="https://via.placeholder.com/800x600/1f2937/22c55e?text=2015"
-                                alt="Time-lapse">
-                            <div class="timelapse-year-overlay">
-                                <h1 id="currentYear">2015</h1>
-                            </div>
-                            <div class="timelapse-stats-overlay">
-                                <div class="stat-item">
-                                    <span class="stat-label">Carbon:</span>
-                                    <span class="stat-value" id="currentCarbon">187 tons/year</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Controls -->
-                        <div class="timelapse-controls">
-                            <button class="control-btn" onclick="resetTimelapse()">
-                                <i class="fas fa-step-backward"></i>
-                            </button>
-                            <button class="control-btn" id="playPauseBtn" onclick="togglePlayPause()">
-                                <i class="fas fa-play"></i>
-                            </button>
-                            <button class="control-btn" onclick="stepForward()">
-                                <i class="fas fa-step-forward"></i>
-                            </button>
-                            <button class="control-btn" onclick="downloadTimelapse()">
-                                <i class="fas fa-download"></i>
-                            </button>
-                        </div>
-
-                        <!-- Progress Bar -->
-                        <div class="progress-container">
-                            <input type="range" id="timelapseProgress" min="0" max="10" value="0"
-                                class="progress-slider" oninput="seekTimelapse(this.value)">
-                            <div class="progress-labels">
-                                <span>2015</span>
-                                <span>2020</span>
-                                <span>2025</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Carbon Trend Chart -->
-                    <div class="chart-container">
-                        <h3>Carbon Emission Trend (2015-2025)</h3>
-                        <canvas id="carbonChart"></canvas>
-                    </div>
-
-                    <!-- Comparison Stats -->
-                    <div class="comparison-stats">
-                        <div class="stat-card">
-                            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2);">
-                                <i class="fas fa-calendar-alt" style="color: #3b82f6;"></i>
-                            </div>
-                            <div>
-                                <p class="stat-label">2015 Baseline</p>
-                                <h3 class="stat-number">187 tons/year</h3>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2);">
-                                <i class="fas fa-arrow-up" style="color: #ef4444;"></i>
-                            </div>
-                            <div>
-                                <p class="stat-label">Total Increase</p>
-                                <h3 class="stat-number">+47%</h3>
-                            </div>
-                        </div>
-
-                        <div class="stat-card">
-                            <div class="stat-icon" style="background: rgba(234, 179, 8, 0.2);">
-                                <i class="fas fa-calendar-check" style="color: #eab308;"></i>
-                            </div>
-                            <div>
-                                <p class="stat-label">2025 Current</p>
-                                <h3 class="stat-number">275 tons/year</h3>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -340,7 +249,7 @@
         </div>
     </main>
 
-    <!-- Fullscreen Modal for Zoomed Views - NEW -->
+    <!-- Fullscreen Modal for Zoomed Views -->
     <div id="fullscreenModal" class="fullscreen-modal">
         <button class="modal-close-btn" onclick="closeFullscreenModal()">
             <i class="fas fa-times"></i> Close
@@ -360,7 +269,30 @@
     <script src="../js/auth.js"></script>
     <script src="../js/utils.js"></script>
     <script src="../js/site-analysis.js"></script>
-    <script src="../js/timelapse.js"></script>
+    
+    <script>
+        // Function to open time-lapse page
+        function openTimelapsePage() {
+            // Get current site data from URL or localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            const siteId = urlParams.get('id');
+            
+            // Store current site data in sessionStorage for the time-lapse page
+            if (typeof currentSite !== 'undefined' && currentSite) {
+                sessionStorage.setItem('timelapseData', JSON.stringify({
+                    siteId: siteId,
+                    siteName: currentSite.name || document.getElementById('siteName').textContent,
+                    latitude: currentSite.latitude,
+                    longitude: currentSite.longitude,
+                    carbonEstimate: currentSite.carbonEstimate,
+                    facilityType: currentSite.type
+                }));
+            }
+            
+            // Open time-lapse page
+            window.location.href = `time-lapse-page.html${siteId ? '?siteId=' + siteId : ''}`;
+        }
+    </script>
 </body>
 
 </html>
