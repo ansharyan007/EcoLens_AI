@@ -11,7 +11,7 @@ let selectedLocation = null;
 // Initialize map on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Check authentication
-    checkAuth();
+    // checkAuth();
 
     // Initialize map
     initMap();
