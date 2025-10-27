@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - EcoLens AI</title>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/profile.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <div>
+                <h2>EcoLens AI</h2>
+                <p>Carbon Monitor</p>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="map.html" class="nav-link">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Map Explorer</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <i class="fas fa-trophy"></i>
+                <span>Leaderboard</span>
+            </a>
+            <a href="profile.html" class="nav-link active">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <div class="user-info">
+            <div class="avatar" id="sidebarAvatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="user-details">
+                <p class="username" id="sidebarName">Loading...</p>
+                <p class="points" id="sidebarPoints">0 points</p>
+            </div>
+            <button onclick="logout()" class="logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-banner"></div>
+            <div class="profile-main">
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar" id="profileAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <button class="avatar-edit-btn" onclick="openEditModal()">
+                        <i class="fas fa-camera"></i>
+                    </button>
+                </div>
+                <div class="profile-info">
+                    <h1 id="profileName">Demo User</h1>
+                    <p id="profileBio">Environmental advocate | Carbon monitoring enthusiast</p>
+                    <p class="profile-meta">
+                        <i class="fas fa-calendar-alt"></i>
+                        Member since <span id="memberSince">Aug 15, 2024</span>
+                    </p>
+                </div>
+                <button class="btn-edit-profile" onclick="openEditModal()">
+                    <i class="fas fa-edit"></i> Edit Profile
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #22c55e, #16a34a);">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalPoints">1,250</h3>
+                    <p>Total Points</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                    <i class="fas fa-ranking-star"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="globalRank">#23</h3>
+                    <p>Global Rank</p>
+                    <span class="stat-badge">Top 5%</span>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <i class="fas fa-flag"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="totalReports">47</h3>
+                    <p>Reports Submitted</p>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+                    <i class="fas fa-medal"></i>
+                </div>
+                <div class="stat-content">
+                    <h3 id="badgesEarned">8/12</h3>
+                    <p>Badges Earned</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="profile-content">
+            <!-- Left Column -->
+            <div class="profile-left">
+                <!-- Badges Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-medal"></i> Achievements</h2>
+                        <p>Unlock badges by completing challenges</p>
+                    </div>
+
+                    <div class="badges-grid" id="badgesGrid">
+                        <!-- Badges will be loaded here by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Activity Feed -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-clock"></i> Recent Activity</h2>
+                        <p>Your latest contributions</p>
+                    </div>
+
+                    <div class="activity-feed" id="activityFeed">
+                        <!-- Activity items will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="profile-right">
+                <!-- User Reports -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-list"></i> My Reports</h2>
+                        <p>Sites you've reported</p>
+                    </div>
+
+                    <div class="reports-list" id="reportsList">
+                        <!-- Reports will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Settings -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h2><i class="fas fa-cog"></i> Settings</h2>
+                        <p>Manage your preferences</p>
+                    </div>
+
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <i class="fas fa-envelope"></i>
+                                <div>
+                                    <h4>Email Notifications</h4>
+                                    <p>Receive updates via email</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="emailNotifications" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <i class="fas fa-users"></i>
+                                <div>
+                                    <h4>Public Profile</h4>
+                                    <p>Show your profile to others</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="publicProfile" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <button class="btn-save-settings" onclick="saveSettings()">
+                            <i class="fas fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Profile</h2>
+                <button class="close-btn" onclick="closeEditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="editName" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label>Bio</label>
+                    <textarea id="editBio" rows="3" placeholder="Tell us about yourself..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Avatar URL (Optional)</label>
+                    <input type="text" id="editAvatar" placeholder="https://example.com/avatar.jpg">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveProfile()">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/profile.js"></script>
+</body>
+</html>
