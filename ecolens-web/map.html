@@ -120,6 +120,46 @@
         <div class="map-area">
             <div id="map"></div>
 
+            <!-- Environmental Data Layers Panel -->
+            <div class="env-layers-panel">
+                <h3><i class="fas fa-layer-group"></i> Environmental Layers</h3>
+                
+                <div class="layer-toggle">
+                    <input type="checkbox" id="layerAQI" onchange="toggleLayer('aqi')">
+                    <label for="layerAQI">
+                        <i class="fas fa-wind"></i> Air Quality Index
+                    </label>
+                </div>
+                
+                <div class="layer-toggle">
+                    <input type="checkbox" id="layerPollution" onchange="toggleLayer('pollution')">
+                    <label for="layerPollution">
+                        <i class="fas fa-smog"></i> Pollution (PM2.5)
+                    </label>
+                </div>
+                
+                <div class="layer-toggle">
+                    <input type="checkbox" id="layerRainfall" onchange="toggleLayer('rainfall')">
+                    <label for="layerRainfall">
+                        <i class="fas fa-cloud-rain"></i> Rainfall Data
+                    </label>
+                </div>
+                
+                <div class="layer-toggle">
+                    <input type="checkbox" id="layerNitrogen" onchange="toggleLayer('nitrogen')">
+                    <label for="layerNitrogen">
+                        <i class="fas fa-flask"></i> Nitrogen Dioxide
+                    </label>
+                </div>
+                
+                <div class="layer-toggle">
+                    <input type="checkbox" id="layerTemp" onchange="toggleLayer('temperature')">
+                    <label for="layerTemp">
+                        <i class="fas fa-temperature-high"></i> Temperature
+                    </label>
+                </div>
+            </div>
+
             <!-- Add Site Button -->
             <button class="add-site-btn" onclick="enableAddMode()" title="Click map to add new site">
                 <i class="fas fa-plus"></i>
