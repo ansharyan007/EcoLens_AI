@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Analysis - EcoLens AI</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js for carbon trend graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/site-analysis.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+        <div class="logo">
+            <i class="fas fa-leaf"></i>
+            <div>
+                <h2>EcoLens AI</h2>
+                <p>Carbon Monitor</p>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="map.html" class="nav-link">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Map Explorer</span>
+            </a>
+            <a href="leaderboard.html" class="nav-link">
+                <i class="fas fa-trophy"></i>
+                <span>Leaderboard</span>
+            </a>
+            <a href="profile.html" class="nav-link">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <div class="user-info">
+            <div class="avatar" id="userAvatar">DU</div>
+            <div class="user-details">
+                <p class="username" id="displayName">Demo User</p>
+                <p class="points" id="userPoints">1,250 points</p>
+            </div>
+            <button onclick="logout()" class="logout-btn" title="Logout">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="site-content">
+        <!-- Header -->
+        <div class="site-header">
+            <div class="header-left">
+                <button class="back-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="site-title-section">
+                    <h1 id="siteName">Loading...</h1>
+                    <p id="siteLocation">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="locationText">Loading location...</span>
+                    </p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn" onclick="shareSite()">
+                    <i class="fas fa-share-alt"></i>
+                    Share
+                </button>
+                <button class="action-btn" onclick="exportReport()">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('overview')">
+                <i class="fas fa-info-circle"></i>
+                Overview
+            </button>
+            <button class="tab-btn" onclick="switchTab('timelapse')">
+                <i class="fas fa-play-circle"></i>
+                Time-Lapse
+            </button>
+            <button class="tab-btn" onclick="switchTab('reports')">
+                <i class="fas fa-clipboard-list"></i>
+                Reports
+            </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Overview Tab -->
+            <div id="overview-tab" class="tab-panel active">
+                <!-- Metric Cards -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: rgba(34, 197, 94, 0.2);">
+                            <i class="fas fa-industry" style="color: #22c55e;"></i>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Facility Type</p>
+                            <h3 class="metric-value" id="facilityType">-</h3>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: rgba(234, 179, 8, 0.2);">
+                            <i class="fas fa-smog" style="color: #eab308;"></i>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Carbon Estimate</p>
+                            <h3 class="metric-value" id="carbonEstimate">-</h3>
+                            <p class="metric-unit">tons/year</p>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: rgba(59, 130, 246, 0.2);">
+                            <i class="fas fa-clipboard-check" style="color: #3b82f6;"></i>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Total Reports</p>
+                            <h3 class="metric-value" id="reportCount">-</h3>
+                        </div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: rgba(239, 68, 68, 0.2);">
+                            <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                        </div>
+                        <div class="metric-info">
+                            <p class="metric-label">Status</p>
+                            <h3 class="metric-value" id="violationStatus">-</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Images Section -->
+                <div class="images-section">
+                    <div class="image-card">
+                        <h3>Satellite View</h3>
+                        <div class="image-container">
+                            <img id="satelliteImage" src="https://via.placeholder.com/400x300/1f2937/22c55e?text=Satellite+View" alt="Satellite">
+                            <div class="image-overlay">
+                                <button class="zoom-btn" onclick="zoomImage('satellite')">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="image-card">
+                        <h3>Ground View</h3>
+                        <div class="image-container">
+                            <img id="groundImage" src="https://via.placeholder.com/400x300/1f2937/eab308?text=Ground+View" alt="Ground">
+                            <div class="image-overlay">
+                                <button class="zoom-btn" onclick="zoomImage('ground')">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details Section -->
+                <div class="details-section">
+                    <h3>Site Details</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <i class="fas fa-map-pin"></i>
+                            <div>
+                                <p class="detail-label">Coordinates</p>
+                                <p class="detail-value" id="coordinates">-</p>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-brain"></i>
+                            <div>
+                                <p class="detail-label">AI Confidence</p>
+                                <p class="detail-value" id="aiConfidence">-</p>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-calendar"></i>
+                            <div>
+                                <p class="detail-label">First Reported</p>
+                                <p class="detail-value" id="firstReported">-</p>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <p class="detail-label">Contributors</p>
+                                <p class="detail-value" id="contributors">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="btn-primary" onclick="viewOnMap()">
+                        <i class="fas fa-map"></i>
+                        View on Map
+                    </button>
+                    <button class="btn-secondary" onclick="switchTab('timelapse')">
+                        <i class="fas fa-play"></i>
+                        Generate Time-Lapse
+                    </button>
+                </div>
+            </div>
+
+            <!-- Time-Lapse Tab -->
+            <div id="timelapse-tab" class="tab-panel">
+                <div class="timelapse-container">
+                    <h2>10-Year Carbon Emission Time-Lapse</h2>
+                    <p class="timelapse-subtitle">Satellite imagery analysis from 2015 to 2025</p>
+
+                    <!-- Time-Lapse Viewer -->
+                    <div class="timelapse-viewer">
+                        <div class="timelapse-image-container">
+                            <img id="timelapseImage" src="https://via.placeholder.com/800x600/1f2937/22c55e?text=2015" alt="Time-lapse">
+                            <div class="timelapse-year-overlay">
+                                <h1 id="currentYear">2015</h1>
+                            </div>
+                            <div class="timelapse-stats-overlay">
+                                <div class="stat-item">
+                                    <span class="stat-label">Carbon:</span>
+                                    <span class="stat-value" id="currentCarbon">187 tons/year</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="timelapse-controls">
+                            <button class="control-btn" onclick="resetTimelapse()">
+                                <i class="fas fa-step-backward"></i>
+                            </button>
+                            <button class="control-btn" id="playPauseBtn" onclick="togglePlayPause()">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            <button class="control-btn" onclick="stepForward()">
+                                <i class="fas fa-step-forward"></i>
+                            </button>
+                            <button class="control-btn" onclick="downloadTimelapse()">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="progress-container">
+                            <input type="range" id="timelapseProgress" min="0" max="10" value="0" 
+                                   class="progress-slider" oninput="seekTimelapse(this.value)">
+                            <div class="progress-labels">
+                                <span>2015</span>
+                                <span>2020</span>
+                                <span>2025</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Carbon Trend Chart -->
+                    <div class="chart-container">
+                        <h3>Carbon Emission Trend (2015-2025)</h3>
+                        <canvas id="carbonChart"></canvas>
+                    </div>
+
+                    <!-- Comparison Stats -->
+                    <div class="comparison-stats">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2);">
+                                <i class="fas fa-calendar-alt" style="color: #3b82f6;"></i>
+                            </div>
+                            <div>
+                                <p class="stat-label">2015 Baseline</p>
+                                <h3 class="stat-number">187 tons/year</h3>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2);">
+                                <i class="fas fa-arrow-up" style="color: #ef4444;"></i>
+                            </div>
+                            <div>
+                                <p class="stat-label">Total Increase</p>
+                                <h3 class="stat-number">+47%</h3>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(234, 179, 8, 0.2);">
+                                <i class="fas fa-calendar-check" style="color: #eab308;"></i>
+                            </div>
+                            <div>
+                                <p class="stat-label">2025 Current</p>
+                                <h3 class="stat-number">275 tons/year</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-panel">
+                <div class="reports-container">
+                    <h2>Site Reports History</h2>
+                    <div id="reportsList" class="reports-list">
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading reports...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Custom Scripts -->
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/utils.js"></script>
+    <script src="../js/site-analysis.js"></script>
+</body>
+</html>
