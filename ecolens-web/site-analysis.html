@@ -149,27 +149,35 @@
                     </div>
                 </div>
 
-                <!-- Images Section -->
+                <!-- Images Section - UPDATED -->
                 <div class="images-section">
-                    <div class="image-card">
-                        <h3>Satellite View</h3>
+                    <div class="image-card" id="groundImageCard">
+                        <h3><i class="fas fa-street-view"></i> Ground View</h3>
                         <div class="image-container">
-                            <img id="satelliteImage" src="https://via.placeholder.com/400x300/1f2937/22c55e?text=Satellite+View" alt="Satellite">
+                            <div class="loading-placeholder" id="groundLoading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading ground view...</p>
+                            </div>
+                            <img id="groundImage" src="" alt="Ground" style="display: none;">
                             <div class="image-overlay">
-                                <button class="zoom-btn" onclick="zoomImage('satellite')">
-                                    <i class="fas fa-search-plus"></i>
+                                <button class="zoom-btn" onclick="zoomImage('ground')" title="View Fullscreen">
+                                    <i class="fas fa-expand"></i>
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="image-card">
-                        <h3>Ground View</h3>
+                    <div class="image-card" id="satelliteImageCard">
+                        <h3><i class="fas fa-satellite"></i> Satellite View</h3>
                         <div class="image-container">
-                            <img id="groundImage" src="https://via.placeholder.com/400x300/1f2937/eab308?text=Ground+View" alt="Ground">
+                            <div class="loading-placeholder" id="satelliteLoading">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading satellite view...</p>
+                            </div>
+                            <img id="satelliteImage" src="" alt="Satellite" style="display: none;">
                             <div class="image-overlay">
-                                <button class="zoom-btn" onclick="zoomImage('ground')">
-                                    <i class="fas fa-search-plus"></i>
+                                <button class="zoom-btn" onclick="zoomImage('satellite')" title="View Fullscreen">
+                                    <i class="fas fa-expand"></i>
                                 </button>
                             </div>
                         </div>
@@ -328,6 +336,16 @@
             </div>
         </div>
     </main>
+
+    <!-- Fullscreen Modal for Zoomed Views - NEW -->
+    <div id="fullscreenModal" class="fullscreen-modal">
+        <button class="modal-close-btn" onclick="closeFullscreenModal()">
+            <i class="fas fa-times"></i> Close
+        </button>
+        <div class="modal-content">
+            <iframe id="fullscreenIframe" frameborder="0"></iframe>
+        </div>
+    </div>
 
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>

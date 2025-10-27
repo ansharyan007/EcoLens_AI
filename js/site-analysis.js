@@ -112,30 +112,134 @@ function displaySiteData(site) {
     setSiteImages(site);
 }
 
-// FIXED: Set site images with proper fallbacks
+// UPDATED: Set site images with real Google Maps views
 function setSiteImages(site) {
     const satelliteImg = document.getElementById('satelliteImage');
     const groundImg = document.getElementById('groundImage');
     
-    // Create inline SVG images (100% reliable, no network needed)
-    satelliteImg.src = createSiteImage(
-        'Satellite View',
-        `${site.latitude.toFixed(2)}°N, ${site.longitude.toFixed(2)}°E`,
-        '#22c55e',
-        'satellite'
-    );
-    
-    groundImg.src = createSiteImage(
-        'Ground View',
-        site.facilityType.toUpperCase() + ' Plant',
-        '#eab308',
-        'ground'
-    );
+    // Use real Google Maps satellite and street view
+    loadGoogleMapsImages(site.latitude, site.longitude, satelliteImg, groundImg);
     
     satelliteImg.alt = `Satellite view of ${site.name}`;
     groundImg.alt = `Ground view of ${site.name}`;
     
-    console.log('✅ Images created for', site.name);
+    console.log('Loading real imagery for:', site.name);
+}
+
+
+// NEW: Load real Google Maps satellite and street view images
+function loadGoogleMapsImages(lat, lng, satelliteImg, groundImg) {
+    // Ground View - Using Google Street View Static API (no API key needed with iframe method)
+    // We'll convert iframe to static image preview
+    const streetViewUrl = `https://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}&cbp=11,0,0,0,0&output=svembed`;
+    
+    // Satellite View - Using Google Static Maps (works without API key in limited capacity)
+    const satelliteUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=17&size=800x600&maptype=satellite&format=png`;
+    
+    // For better results without API key, use iframe embedding approach
+    convertIframeToImage(streetViewUrl, groundImg, 'street');
+    convertIframeToImage(`https://maps.google.com/maps?t=k&q=loc:${lat}+${lng}&output=embed&z=17`, satelliteImg, 'satellite');
+}
+
+// NEW: Convert iframe embed to displayable image format
+function convertIframeToImage(iframeUrl, imgElement, type) {
+    // Create temporary iframe container
+    const container = document.createElement('div');
+    container.style.cssText = 'position: absolute; left: -9999px; width: 800px; height: 600px;';
+    document.body.appendChild(container);
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'width: 100%; height: 100%; border: none;';
+    iframe.src = iframeUrl;
+    
+    container.appendChild(iframe);
+    
+    // For display, we'll use the iframe URL as background or direct embed
+    // Alternative: Use a proxy service or direct iframe embedding in the image container
+    
+    // Better approach: Replace img with iframe directly for live view
+    const imageCard = imgElement.parentElement;
+    const existingIframe = imageCard.querySelector('iframe');
+    
+    if (existingIframe) {
+        existingIframe.remove();
+    }
+    
+    const newIframe = document.createElement('iframe');
+    newIframe.style.cssText = 'width: 100%; height: 100%; border: none; border-radius: 0.5rem;';
+    newIframe.src = iframeUrl;
+    newIframe.title = type === 'street' ? 'Ground View' : 'Satellite View';
+    
+    // Hide the original img and show iframe
+    imgElement.style.display = 'none';
+    imageCard.insertBefore(newIframe, imgElement);
+    
+    // Cleanup temporary container
+    setTimeout(() => {
+        document.body.removeChild(container);
+    }, 100);
+}
+
+// NEW: Enhanced zoom functionality with iframe support
+function zoomImage(type) {
+    const site = currentSite;
+    if (!site) return;
+    
+    const lat = site.latitude;
+    const lng = site.longitude;
+    
+    let url;
+    if (type === 'satellite') {
+        url = `https://maps.google.com/maps?t=k&q=loc:${lat}+${lng}&output=embed&z=18`;
+    } else {
+        url = `https://maps.google.com/maps?q=&layer=c&cbll=${lat},${lng}&cbp=11,0,0,0,0&output=svembed`;
+    }
+    
+    // Create fullscreen modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<i class="fas fa-times"></i> Close';
+    closeBtn.style.cssText = `
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        padding: 12px 24px;
+        background: #ef4444;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10001;
+    `;
+    closeBtn.onclick = () => document.body.removeChild(modal);
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = `
+        width: 90%;
+        height: 90%;
+        border: 2px solid #22c55e;
+        border-radius: 12px;
+    `;
+    iframe.src = url;
+    
+    modal.appendChild(closeBtn);
+    modal.appendChild(iframe);
+    document.body.appendChild(modal);
 }
 
 // Create SVG image as base64 data URI (works offline!)

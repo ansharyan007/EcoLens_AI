@@ -171,7 +171,7 @@
     margin-top: 0.25rem;
 }
 
-/* ==================== IMAGES SECTION ==================== */
+/* ==================== IMAGES SECTION - UPDATED ==================== */
 .images-section {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -189,18 +189,58 @@
 .image-card h3 {
     margin-bottom: 1rem;
     color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .image-container {
     position: relative;
     border-radius: 0.5rem;
     overflow: hidden;
+    min-height: 350px;
+    background: #0f172a;
 }
 
-.image-container img {
+.image-container img,
+.image-container iframe {
     width: 100%;
-    height: auto;
+    height: 100%;
+    min-height: 350px;
     display: block;
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.image-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* NEW: Loading placeholder for images */
+.loading-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a;
+    color: var(--gray);
+    gap: 1rem;
+}
+
+.loading-placeholder i {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.loading-placeholder p {
+    font-size: 0.875rem;
 }
 
 .image-overlay {
@@ -215,6 +255,7 @@
     justify-content: center;
     opacity: 0;
     transition: opacity 0.2s;
+    z-index: 10;
 }
 
 .image-container:hover .image-overlay {
@@ -222,8 +263,8 @@
 }
 
 .zoom-btn {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     background: var(--primary);
     border: none;
     border-radius: 50%;
@@ -231,10 +272,69 @@
     font-size: 1.25rem;
     cursor: pointer;
     transition: transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .zoom-btn:hover {
     transform: scale(1.1);
+}
+
+/* ==================== FULLSCREEN MODAL - NEW ==================== */
+.fullscreen-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.fullscreen-modal.active {
+    display: flex;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.2s;
+}
+
+.modal-close-btn:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.modal-content {
+    width: 95%;
+    height: 95%;
+    max-width: 1600px;
+    max-height: 1000px;
+}
+
+#fullscreenIframe {
+    width: 100%;
+    height: 100%;
+    border: 2px solid var(--primary);
+    border-radius: 12px;
 }
 
 /* ==================== DETAILS SECTION ==================== */
@@ -685,5 +785,14 @@
 
     .action-buttons {
         flex-direction: column;
+    }
+    
+    .image-container {
+        min-height: 250px;
+    }
+    
+    .image-container img,
+    .image-container iframe {
+        min-height: 250px;
     }
 }
