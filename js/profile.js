@@ -1,370 +1,416 @@
-// Profile JavaScript - Dynamic User Profile
-// Loads user-specific data from Firestore
+// Profile Page JavaScript
+// Handles user profile data, badges, activity, and settings
 
 let currentUser = null;
-let userData = null;
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadUserProfile();
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('✅ Profile page loaded');
+    
+    // Get Firebase references
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    
+    // Check authentication
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            console.log('✅ User authenticated:', user.uid);
+            currentUser = user;
+            await loadUserProfile(user.uid, db);
+        } else {
+            console.log('❌ No user authenticated, redirecting to login...');
+            window.location.href = 'index.html';
+        }
+    });
 });
 
-// Load user profile
-async function loadUserProfile() {
+// Load user profile data
+async function loadUserProfile(userId, db) {
     try {
-        // Check if user is logged in
-        auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                // Not logged in - redirect to login
-                // window.location.href = 'index.html';
-                
-                // FOR TESTING: Load mock data
-                loadMockProfile();
-                return;
-            }
+        console.log('🔄 Loading user profile for:', userId);
+        
+        const userRef = db.collection('users').doc(userId);
+        const userDoc = await userRef.get();
+        
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            console.log('✅ User data loaded:', userData);
             
-            currentUser = user;
+            // Display profile info
+            displayProfileInfo(userData, currentUser);
+            displayStats(userData);
+            displayBadges(userData);
+            displayActivity(userData);
+            displayReports(userId, db);
+            displaySettings(userData);
+        } else {
+            console.log('⚠️ User document not found, creating default profile...');
             
-            // Load user data from Firestore
-            const userDoc = await db.collection('users').doc(user.uid).get();
+            // Create default user document
+            const now = new Date();
+            const defaultUserData = {
+                email: currentUser.email,
+                displayName: currentUser.displayName || currentUser.email.split('@')[0],
+                photoURL: currentUser.photoURL || null,
+                bio: "Member of EcoLens AI community",
+                points: 0,
+                rank: null,
+                totalReports: 0,
+                verifiedReports: 0,
+                rejectedReports: 0,
+                pendingReports: 0,
+                badges: [],
+                badgesEarned: 0,
+                totalBadges: 12,
+                recentActivity: [
+                    {
+                        type: "join",
+                        message: "Joined EcoLens AI",
+                        timestamp: now,
+                        points: 0,
+                        icon: "user-plus"
+                    }
+                ],
+                settings: {
+                    emailNotifications: true,
+                    publicProfile: true,
+                    showOnLeaderboard: true,
+                    language: "en",
+                    theme: "dark"
+                },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+                memberSince: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                country: null,
+                city: null,
+                currentStreak: 0,
+                longestStreak: 0,
+                lastReportDate: null,
+                achievementProgress: {
+                    "report-10": 0,
+                    "report-50": 0,
+                    "report-100": 0,
+                    "points-500": 0,
+                    "points-1000": 0,
+                    "points-5000": 0,
+                    "streak-7": 0,
+                    "streak-30": 0,
+                    "violations-5": 0,
+                    "violations-20": 0
+                },
+                profileComplete: false,
+                completionPercentage: 20
+            };
             
-            if (userDoc.exists) {
-                userData = userDoc.data();
-                displayUserProfile(userData);
-                loadUserReports(user.uid);
-                loadUserActivity(userData.recentActivity || []);
-                loadUserBadges(userData.badges || []);
-            } else {
-                console.error('User document not found');
-                loadMockProfile();
-            }
-        });
+            await userRef.set(defaultUserData);
+            
+            // Create leaderboard entry
+            await db.collection('leaderboard').doc(userId).set({
+                userId: userId,
+                displayName: defaultUserData.displayName,
+                photoURL: defaultUserData.photoURL,
+                points: 0,
+                rank: null,
+                totalReports: 0,
+                badgesEarned: 0,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            console.log('✅ Default profile created');
+            
+            // Display the default data
+            displayProfileInfo(defaultUserData, currentUser);
+            displayStats(defaultUserData);
+            displayBadges(defaultUserData);
+            displayActivity(defaultUserData);
+            displayReports(userId, db);
+            displaySettings(defaultUserData);
+        }
+        
     } catch (error) {
-        console.error('Error loading profile:', error);
-        loadMockProfile();
+        console.error('❌ Error loading profile:', error);
+        console.error('Error details:', error.message);
+        alert('Failed to load profile data. Error: ' + error.message);
     }
 }
 
-// Display user profile
-function displayUserProfile(data) {
-    // Header - Name and Bio
-    document.getElementById('profileName').textContent = data.displayName || 'User';
-    document.getElementById('profileBio').textContent = data.bio || 'New EcoLens contributor';
+// Display profile information
+function displayProfileInfo(userData, user) {
+    // Profile header
+    document.getElementById('profileName').textContent = userData.displayName || user.displayName || 'User';
+    document.getElementById('profileBio').textContent = userData.bio || 'No bio yet';
     
-    // Member Since
-    if (data.memberSince) {
-        const memberDate = data.memberSince.toDate();
-        const formattedDate = memberDate.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-        });
-        document.getElementById('memberSince').textContent = formattedDate;
+    // Member since
+    if (userData.memberSince) {
+        try {
+            const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
+            document.getElementById('memberSince').textContent = date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        } catch (e) {
+            document.getElementById('memberSince').textContent = 'Recently';
+        }
+    } else {
+        document.getElementById('memberSince').textContent = 'Recently';
     }
     
     // Avatar
-    const avatarEls = document.querySelectorAll('#profileAvatar, #sidebarAvatar');
-    avatarEls.forEach(el => {
-        if (data.photoURL) {
-            el.innerHTML = `<img src="${data.photoURL}" alt="Avatar">`;
+    const photoURL = userData.photoURL || user.photoURL;
+    const displayName = userData.displayName || user.displayName || 'User';
+    
+    const avatarElements = document.querySelectorAll('#profileAvatar, #sidebarAvatar');
+    avatarElements.forEach(elem => {
+        if (photoURL) {
+            elem.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
         } else {
-            const initials = getInitials(data.displayName || 'User');
-            el.innerHTML = initials;
+            elem.innerHTML = `<i class="fas fa-user"></i>`;
         }
     });
     
-    // Sidebar Info
-    document.getElementById('sidebarName').textContent = data.displayName || 'User';
-    document.getElementById('sidebarPoints').textContent = `${formatNumber(data.points || 0)} points`;
-    
-    // Stats Cards
-    document.getElementById('totalPoints').textContent = formatNumber(data.points || 0);
-    document.getElementById('globalRank').textContent = `#${data.rank || '--'}`;
-    document.getElementById('totalReports').textContent = data.totalReports || 0;
-    document.getElementById('badgesEarned').textContent = `${data.badgesEarned || 0}/${data.totalBadges || 12}`;
-    
-    // Add rank badge if in top percentage
-    if (data.rank && data.rank <= 50) {
-        const rankPercentage = Math.ceil((data.rank / 1000) * 100); // Assuming 1000 users
-        const badge = document.createElement('span');
-        badge.className = 'stat-badge';
-        badge.textContent = `Top ${rankPercentage}%`;
-        document.getElementById('globalRank').parentElement.appendChild(badge);
-    }
-    
-    // Settings
-    if (data.settings) {
-        document.getElementById('emailNotifications').checked = data.settings.emailNotifications !== false;
-        document.getElementById('publicProfile').checked = data.settings.publicProfile !== false;
-    }
+    // Sidebar info
+    document.getElementById('sidebarName').textContent = displayName;
+    document.getElementById('sidebarPoints').textContent = `${userData.points || 0} points`;
 }
 
-// Load user reports
-async function loadUserReports(userId) {
-    try {
-        const reportsSnapshot = await db.collection('reports')
-            .where('userId', '==', userId)
-            .orderBy('timestamp', 'desc')
-            .limit(10)
-            .get();
-        
-        const reports = [];
-        reportsSnapshot.forEach(doc => {
-            reports.push({ id: doc.id, ...doc.data() });
-        });
-        
-        displayUserReports(reports);
-    } catch (error) {
-        console.error('Error loading reports:', error);
-        displayUserReports(getMockReports());
-    }
+// Display stats
+function displayStats(userData) {
+    document.getElementById('totalPoints').textContent = userData.points || 0;
+    document.getElementById('globalRank').textContent = userData.rank ? `#${userData.rank}` : 'Unranked';
+    document.getElementById('totalReports').textContent = userData.totalReports || 0;
+    document.getElementById('badgesEarned').textContent = `${userData.badgesEarned || 0}/${userData.totalBadges || 12}`;
 }
 
-// Display user reports
-function displayUserReports(reports) {
-    const reportsList = document.getElementById('reportsList');
+// Display badges
+function displayBadges(userData) {
+    const badgesGrid = document.getElementById('badgesGrid');
     
-    if (reports.length === 0) {
-        reportsList.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 2rem;">No reports yet</p>';
+    const allBadges = [
+        { id: 'first-report', name: 'First Steps', icon: 'flag', description: 'Submit your first report', earned: false },
+        { id: 'carbon-detective', name: 'Carbon Detective', icon: 'search', description: 'Report 10 sites', earned: false },
+        { id: 'eco-warrior', name: 'Eco Warrior', icon: 'leaf', description: 'Report 50 sites', earned: false },
+        { id: 'rising-star', name: 'Rising Star', icon: 'star', description: 'Earn 500 points', earned: false },
+        { id: 'top-contributor', name: 'Top Contributor', icon: 'crown', description: 'Earn 1000 points', earned: false },
+        { id: 'week-streak', name: 'Week Streak', icon: 'fire', description: '7 day streak', earned: false },
+        { id: 'month-streak', name: 'Month Streak', icon: 'gem', description: '30 day streak', earned: false },
+        { id: 'team-player', name: 'Team Player', icon: 'users', description: 'Verify 10 reports', earned: false }
+    ];
+    
+    // Mark earned badges
+    const earnedBadges = userData.badges || [];
+    allBadges.forEach(badge => {
+        badge.earned = earnedBadges.includes(badge.id);
+    });
+    
+    badgesGrid.innerHTML = allBadges.map(badge => `
+        <div class="badge-card ${badge.earned ? 'earned' : 'locked'}">
+            <div class="badge-icon">
+                <i class="fas fa-${badge.icon}"></i>
+            </div>
+            <h4>${badge.name}</h4>
+            <p>${badge.description}</p>
+            ${badge.earned ? '<span class="badge-status earned">✓ Earned</span>' : '<span class="badge-status locked">🔒 Locked</span>'}
+        </div>
+    `).join('');
+}
+
+// Display activity
+function displayActivity(userData) {
+    const activityFeed = document.getElementById('activityFeed');
+    const activities = userData.recentActivity || [];
+    
+    if (activities.length === 0) {
+        activityFeed.innerHTML = '<p class="empty-state">No recent activity</p>';
         return;
     }
     
-    reportsList.innerHTML = reports.map(report => `
-        <div class="report-item">
-            <div class="report-icon ${report.verified ? 'verified' : 'pending'}">
-                <i class="fas ${report.verified ? 'fa-check-circle' : 'fa-clock'}"></i>
-            </div>
-            <div class="report-info">
-                <h4>${report.siteName || 'Unknown Site'}</h4>
-                <p>${formatDate(report.timestamp)}</p>
-                <div class="report-meta">
-                    <span><i class="fas fa-smog"></i> ${Math.round(report.carbonEstimate || 0)} tons/year</span>
-                    <span><i class="fas fa-brain"></i> ${Math.round((report.aiConfidence || 0) * 100)}% confidence</span>
-                </div>
-            </div>
-            <button class="btn-view" onclick="viewReport('${report.id}')">
-                <i class="fas fa-eye"></i>
-            </button>
-        </div>
-    `).join('');
-}
-
-// Load user activity
-function loadUserActivity(activities) {
-    const activityFeed = document.getElementById('activityFeed');
-    
-    if (activities.length === 0) {
-        activities = getMockActivity();
-    }
-    
-    activityFeed.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon ${activity.type}">
-                <i class="fas fa-${activity.icon}"></i>
-            </div>
-            <div class="activity-info">
-                <p>${activity.message}</p>
-                <span class="activity-time">${formatTimestamp(activity.timestamp)}</span>
-            </div>
-            ${activity.points > 0 ? `<div class="activity-points">+${activity.points}</div>` : ''}
-        </div>
-    `).join('');
-}
-
-// Load user badges
-function loadUserBadges(earnedBadges) {
-    const badgesGrid = document.getElementById('badgesGrid');
-    
-    // All available badges
-    const allBadges = [
-        { id: 'first-report', name: 'First Report', icon: 'fa-flag', color: '#22c55e', description: 'Submit your first report' },
-        { id: 'eco-warrior', name: 'Eco Warrior', icon: 'fa-leaf', color: '#10b981', description: 'Report 10 sites' },
-        { id: 'top-contributor', name: 'Top Contributor', icon: 'fa-star', color: '#f59e0b', description: 'Reach top 100' },
-        { id: 'carbon-detective', name: 'Carbon Detective', icon: 'fa-search', color: '#3b82f6', description: 'Find 5 violations' },
-        { id: 'satellite-master', name: 'Satellite Master', icon: 'fa-satellite', color: '#8b5cf6', description: 'Analyze 50 sites' },
-        { id: 'week-streak', name: 'Week Streak', icon: 'fa-fire', color: '#ef4444', description: '7 day streak' },
-        { id: 'month-streak', name: 'Month Streak', icon: 'fa-fire-flame-curved', color: '#dc2626', description: '30 day streak' },
-        { id: 'team-player', name: 'Team Player', icon: 'fa-users', color: '#06b6d4', description: 'Verify 20 reports' },
-        { id: 'accuracy-ace', name: 'Accuracy Ace', icon: 'fa-bullseye', color: '#14b8a6', description: '95%+ accuracy' },
-        { id: 'speed-demon', name: 'Speed Demon', icon: 'fa-bolt', color: '#eab308', description: '10 reports in 1 day' },
-        { id: 'global-guardian', name: 'Global Guardian', icon: 'fa-globe', color: '#6366f1', description: 'Report from 10 countries' },
-        { id: 'legendary', name: 'Legendary', icon: 'fa-crown', color: '#a855f7', description: 'Reach rank #1' }
-    ];
-    
-    badgesGrid.innerHTML = allBadges.map(badge => {
-        const earned = earnedBadges.includes(badge.id);
+    activityFeed.innerHTML = activities.slice(0, 10).map(activity => {
+        let date;
+        try {
+            date = activity.timestamp instanceof Date ? activity.timestamp : new Date(activity.timestamp);
+        } catch (e) {
+            date = new Date();
+        }
+        const timeAgo = getTimeAgo(date);
+        
         return `
-            <div class="badge-item ${earned ? 'earned' : 'locked'}">
-                <div class="badge-icon" style="background: ${earned ? badge.color : '#374151'};">
-                    <i class="fas ${badge.icon}"></i>
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas fa-${activity.icon}"></i>
                 </div>
-                <h4>${badge.name}</h4>
-                <p>${badge.description}</p>
-                ${earned ? '<div class="badge-earned"><i class="fas fa-check"></i></div>' : '<div class="badge-lock"><i class="fas fa-lock"></i></div>'}
+                <div class="activity-content">
+                    <p>${activity.message}</p>
+                    <span class="activity-time">${timeAgo}</span>
+                </div>
+                ${activity.points > 0 ? `<span class="activity-points">+${activity.points}</span>` : ''}
             </div>
         `;
     }).join('');
 }
 
+// Display user reports
+async function displayReports(userId, db) {
+    const reportsList = document.getElementById('reportsList');
+    
+    try {
+        const reportsSnapshot = await db.collection('reports')
+            .where('userId', '==', userId)
+            .orderBy('createdAt', 'desc')
+            .limit(5)
+            .get();
+        
+        if (reportsSnapshot.empty) {
+            reportsList.innerHTML = '<p class="empty-state">No reports yet. <a href="map.html">Start contributing!</a></p>';
+            return;
+        }
+        
+        reportsList.innerHTML = reportsSnapshot.docs.map(doc => {
+            const report = doc.data();
+            const statusClass = report.status === 'verified' ? 'success' : report.status === 'rejected' ? 'danger' : 'warning';
+            
+            return `
+                <div class="report-item">
+                    <div class="report-icon">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <div class="report-content">
+                        <h4>${report.siteName || 'Unnamed Site'}</h4>
+                        <p>${report.facilityType || 'Unknown type'}</p>
+                        <span class="badge ${statusClass}">${report.status || 'pending'}</span>
+                    </div>
+                    <span class="report-carbon">${report.carbonEstimate || 0} tons</span>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading reports:', error);
+        reportsList.innerHTML = '<p class="empty-state">No reports yet. <a href="map.html">Start contributing!</a></p>';
+    }
+}
+
+// Display settings
+function displaySettings(userData) {
+    const settings = userData.settings || {};
+    document.getElementById('emailNotifications').checked = settings.emailNotifications !== false;
+    document.getElementById('publicProfile').checked = settings.publicProfile !== false;
+}
+
 // Open edit modal
 function openEditModal() {
-    if (userData) {
-        document.getElementById('editName').value = userData.displayName || '';
-        document.getElementById('editBio').value = userData.bio || '';
-        document.getElementById('editAvatar').value = userData.photoURL || '';
-    }
-    document.getElementById('editProfileModal').classList.add('active');
+    const modal = document.getElementById('editProfileModal');
+    
+    document.getElementById('editName').value = document.getElementById('profileName').textContent;
+    document.getElementById('editBio').value = document.getElementById('profileBio').textContent;
+    document.getElementById('editAvatar').value = currentUser.photoURL || '';
+    
+    modal.style.display = 'flex';
 }
 
 // Close edit modal
 function closeEditModal() {
-    document.getElementById('editProfileModal').classList.remove('active');
+    document.getElementById('editProfileModal').style.display = 'none';
 }
 
 // Save profile
 async function saveProfile() {
-    const name = document.getElementById('editName').value.trim();
-    const bio = document.getElementById('editBio').value.trim();
-    const avatar = document.getElementById('editAvatar').value.trim();
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const user = auth.currentUser;
     
-    if (!name) {
-        alert('Name is required');
+    if (!user) {
+        alert('❌ Please log in first');
+        return;
+    }
+    
+    const newName = document.getElementById('editName').value.trim();
+    const newBio = document.getElementById('editBio').value.trim();
+    const newAvatar = document.getElementById('editAvatar').value.trim();
+    
+    if (!newName) {
+        alert('❌ Please enter your name');
         return;
     }
     
     try {
-        // Update Firestore
-        await db.collection('users').doc(currentUser.uid).update({
-            displayName: name,
-            bio: bio,
-            photoURL: avatar || null
-        });
-        
         // Update Auth profile
-        await currentUser.updateProfile({
-            displayName: name,
-            photoURL: avatar || null
+        await user.updateProfile({
+            displayName: newName,
+            photoURL: newAvatar || null
         });
         
-        alert('Profile updated successfully!');
-        closeEditModal();
+        // Update Firestore document
+        await db.collection('users').doc(user.uid).update({
+            displayName: newName,
+            bio: newBio,
+            photoURL: newAvatar || null,
+            lastActive: firebase.firestore.FieldValue.serverTimestamp()
+        });
         
-        // Reload profile
-        loadUserProfile();
+        console.log('✅ Profile updated');
+        alert('✅ Profile updated successfully!');
+        
+        closeEditModal();
+        location.reload();
+        
     } catch (error) {
-        console.error('Error saving profile:', error);
-        alert('Failed to save profile. Please try again.');
+        console.error('❌ Error updating profile:', error);
+        alert('❌ Failed to update profile: ' + error.message);
     }
 }
 
 // Save settings
 async function saveSettings() {
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const user = auth.currentUser;
+    
+    if (!user) {
+        alert('❌ Please log in first');
+        return;
+    }
+    
     const emailNotifications = document.getElementById('emailNotifications').checked;
     const publicProfile = document.getElementById('publicProfile').checked;
     
     try {
-        await db.collection('users').doc(currentUser.uid).update({
+        await db.collection('users').doc(user.uid).update({
             'settings.emailNotifications': emailNotifications,
-            'settings.publicProfile': publicProfile
+            'settings.publicProfile': publicProfile,
+            'settings.showOnLeaderboard': publicProfile,
+            lastActive: firebase.firestore.FieldValue.serverTimestamp()
         });
         
-        alert('Settings saved successfully!');
+        console.log('✅ Settings saved');
+        alert('✅ Settings saved successfully!');
+        
     } catch (error) {
-        console.error('Error saving settings:', error);
-        alert('Failed to save settings. Please try again.');
+        console.error('❌ Error saving settings:', error);
+        alert('❌ Failed to save settings: ' + error.message);
     }
-}
-
-// View report
-function viewReport(reportId) {
-    window.location.href = `site-analysis.html?reportId=${reportId}`;
 }
 
 // Logout
 function logout() {
     if (confirm('Are you sure you want to logout?')) {
-        auth.signOut().then(() => {
+        firebase.auth().signOut().then(() => {
+            console.log('✅ User logged out');
             window.location.href = 'index.html';
+        }).catch((error) => {
+            console.error('❌ Logout error:', error);
+            alert('❌ Failed to logout: ' + error.message);
         });
     }
 }
 
-// ==================== HELPER FUNCTIONS ====================
-
-function getInitials(name) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-}
-
-function formatNumber(num) {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-}
-
-function formatDate(timestamp) {
-    if (!timestamp) return 'Unknown';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatTimestamp(timestamp) {
-    if (!timestamp) return 'Just now';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+// Helper functions
+function getTimeAgo(date) {
+    const seconds = Math.floor((new Date() - date) / 1000);
     
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDate(timestamp);
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    return `${Math.floor(seconds / 86400)}d ago`;
 }
-
-// ==================== MOCK DATA FOR TESTING ====================
-
-function loadMockProfile() {
-    const mockData = {
-        displayName: 'Demo User',
-        bio: 'Environmental advocate | Carbon monitoring enthusiast',
-        photoURL: null,
-        points: 1250,
-        rank: 23,
-        totalReports: 47,
-        verifiedReports: 38,
-        badgesEarned: 8,
-        totalBadges: 12,
-        badges: ['first-report', 'eco-warrior', 'top-contributor', 'carbon-detective', 'satellite-master', 'week-streak', 'month-streak', 'team-player'],
-        memberSince: { toDate: () => new Date('2024-08-15') },
-        settings: {
-            emailNotifications: true,
-            publicProfile: true
-        }
-    };
-    
-    userData = mockData;
-    displayUserProfile(mockData);
-    loadUserActivity(getMockActivity());
-    loadUserBadges(mockData.badges);
-    displayUserReports(getMockReports());
-}
-
-function getMockActivity() {
-    return [
-        { type: 'report', message: 'Reported Delhi Cement Plant', timestamp: { toDate: () => new Date(Date.now() - 3600000) }, points: 50, icon: 'flag' },
-        { type: 'badge', message: 'Earned "Eco Warrior" badge', timestamp: { toDate: () => new Date(Date.now() - 86400000) }, points: 100, icon: 'medal' },
-        { type: 'rank', message: 'Reached rank #23', timestamp: { toDate: () => new Date(Date.now() - 172800000) }, points: 0, icon: 'trophy' }
-    ];
-}
-
-function getMockReports() {
-    return [
-        { id: '1', siteName: 'Delhi Cement Plant', timestamp: { toDate: () => new Date(Date.now() - 86400000) }, carbonEstimate: 245, aiConfidence: 0.87, verified: true },
-        { id: '2', siteName: 'Mumbai Power Station', timestamp: { toDate: () => new Date(Date.now() - 172800000) }, carbonEstimate: 890, aiConfidence: 0.92, verified: true },
-        { id: '3', siteName: 'Bangalore Steel Factory', timestamp: { toDate: () => new Date(Date.now() - 259200000) }, carbonEstimate: 156, aiConfidence: 0.81, verified: false }
-    ];
-}
-
-console.log('Profile page loaded - Dynamic user profile');

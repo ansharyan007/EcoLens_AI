@@ -91,7 +91,7 @@
                     <i class="fas fa-star"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalPoints">1,250</h3>
+                    <h3 id="totalPoints">0</h3>
                     <p>Total Points</p>
                 </div>
             </div>
@@ -101,9 +101,9 @@
                     <i class="fas fa-ranking-star"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="globalRank">#23</h3>
+                    <h3 id="globalRank">Unranked</h3>
                     <p>Global Rank</p>
-                    <span class="stat-badge">Top 5%</span>
+                    <span class="stat-badge">New User</span>
                 </div>
             </div>
 
@@ -112,7 +112,7 @@
                     <i class="fas fa-flag"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="totalReports">47</h3>
+                    <h3 id="totalReports">0</h3>
                     <p>Reports Submitted</p>
                 </div>
             </div>
@@ -122,7 +122,7 @@
                     <i class="fas fa-medal"></i>
                 </div>
                 <div class="stat-content">
-                    <h3 id="badgesEarned">8/12</h3>
+                    <h3 id="badgesEarned">0/12</h3>
                     <p>Badges Earned</p>
                 </div>
             </div>
@@ -141,6 +141,10 @@
 
                     <div class="badges-grid" id="badgesGrid">
                         <!-- Badges will be loaded here by JavaScript -->
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading badges...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -153,6 +157,10 @@
 
                     <div class="activity-feed" id="activityFeed">
                         <!-- Activity items will be loaded here -->
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading activity...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -168,6 +176,10 @@
 
                     <div class="reports-list" id="reportsList">
                         <!-- Reports will be loaded here -->
+                        <div class="loading-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading reports...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -255,8 +267,6 @@
 
     <!-- Custom Scripts -->
     <script src="../js/config.js"></script>
-    <script src="../js/auth.js"></script>
-    <script src="../js/utils.js"></script>
     <script src="../js/profile.js"></script>
 </body>
 </html>
