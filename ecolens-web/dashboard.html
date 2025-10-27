@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - EcoLens AI</title>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Leaflet CSS for map/heatmap -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-leaf"></i>
+                <span>EcoLens AI</span>
+            </div>
+            <button class="close-btn" id="closeSidebar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item active">
+                <i class="fas fa-chart-line"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="map.html" class="nav-item">
+                <i class="fas fa-map-marked-alt"></i>
+                <span>Map Explorer</span>
+            </a>
+            <a href="leaderboard.html" class="nav-item">
+                <i class="fas fa-trophy"></i>
+                <span>Leaderboard</span>
+            </a>
+            <a href="profile.html" class="nav-item">
+                <i class="fas fa-user-circle"></i>
+                <span>Profile</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navigation Bar -->
+        <header class="top-nav">
+            <button class="menu-toggle" id="menuToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search sites, reports..." id="searchInput">
+            </div>
+
+            <div class="user-info">
+                <div class="notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="badge" id="notifBadge">3</span>
+                </div>
+                <div class="user-avatar" id="userAvatar">
+                    <img src="https://ui-avatars.com/api/?name=User&background=10b981&color=fff" alt="User">
+                </div>
+                <span class="username" id="userName">Loading...</span>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-container">
+            <div class="page-header">
+                <h1>Dashboard Overview</h1>
+                <p>Monitor environmental impact in real-time</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card green">
+                    <div class="stat-icon">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalSites">0</h3>
+                        <p>Total Sites</p>
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> 12% from last month
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card blue">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalUsers">0</h3>
+                        <p>Active Users</p>
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> 8% from last month
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card orange">
+                    <div class="stat-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalReports">0</h3>
+                        <p>Total Reports</p>
+                        <span class="stat-change positive">
+                            <i class="fas fa-arrow-up"></i> 25% from last month
+                        </span>
+                    </div>
+                </div>
+
+                <div class="stat-card red">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="totalViolations">0</h3>
+                        <p>Violations Detected</p>
+                        <span class="stat-change negative">
+                            <i class="fas fa-arrow-down"></i> 5% from last month
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+                <!-- Global Heatmap -->
+                <div class="dashboard-card large">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-globe-asia"></i>
+                            Global Carbon Heatmap
+                        </h2>
+                        <div class="card-actions">
+                            <button class="btn-icon" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="globalHeatmap" class="heatmap-container"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Reports -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-clock"></i>
+                            Recent Reports
+                        </h2>
+                        <a href="#" class="view-all">View All →</a>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentReportsList" class="reports-list">
+                            <!-- Loading state -->
+                            <div class="loading-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading reports...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Contributors -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h2>
+                            <i class="fas fa-star"></i>
+                            Top Contributors
+                        </h2>
+                        <select class="time-filter" id="timeFilter">
+                            <option value="all">All Time</option>
+                            <option value="month">This Month</option>
+                            <option value="week">This Week</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <div id="topContributorsList" class="contributors-list">
+                            <!-- Loading state -->
+                            <div class="loading-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading contributors...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Leaflet JS for heatmap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
+    <!-- Custom JS -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
