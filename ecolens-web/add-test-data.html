@@ -222,7 +222,7 @@
             { name: "Scarlett Morris", email: "scarlett.morris@test.com", city: "Ho Chi Minh City", country: "Vietnam" }
         ];
 
-        const commonPassword = "TestPass123!"; // All users will have this password
+        const commonPassword = "TestPass123!";
 
         function addStatus(message, type = 'info') {
             const div = document.createElement('div');
@@ -276,7 +276,15 @@
 
                     const now = new Date();
 
-                    // Create user document
+                    // ✨ Generate random challenge progress based on user stats
+                    const challengeProgress = {
+                        'challenge-weekly-warrior': getRandomInt(0, Math.min(totalReports, 10)),
+                        'challenge-verification-expert': getRandomInt(0, Math.min(verifiedReports, 20)),
+                        'challenge-streak-master': currentStreak,
+                        'challenge-badge-collector': badgesEarned
+                    };
+
+                    // Create user document with challengeProgress
                     await db.collection('users').doc(user.uid).set({
                         email: userData.email,
                         displayName: userData.name,
@@ -291,6 +299,7 @@
                         badges: [],
                         badgesEarned: badgesEarned,
                         totalBadges: 12,
+                        challengeProgress: challengeProgress, // ✨ NEW FIELD
                         recentActivity: [
                             {
                                 type: "join",
@@ -351,7 +360,7 @@
                         name: userData.name
                     });
 
-                    addStatus(`✅ Created: ${userData.name} (${points} pts)`, 'success');
+                    addStatus(`✅ Created: ${userData.name} (${points} pts, ${Object.values(challengeProgress).reduce((a,b) => a+b, 0)} challenge pts)`, 'success');
 
                     // Sign out after creating each user
                     await auth.signOut();
@@ -370,7 +379,7 @@
             generateBtn.disabled = false;
             deleteBtn.disabled = false;
             
-            addStatus(`✅ Complete! Created ${createdUserIds.length} users`, 'success');
+            addStatus(`✅ Complete! Created ${createdUserIds.length} users with challenge progress`, 'success');
 
             // Show credentials
             displayCredentials();

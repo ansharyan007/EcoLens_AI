@@ -1,4 +1,4 @@
-// Leaderboard JavaScript - Firebase Integration (NO AUTH REQUIRED)
+// Leaderboard JavaScript - Firebase Integration with Authentication
 // Handles leaderboard display, rankings, and challenges with real-time data
 
 let currentPeriod = 'all';
@@ -12,71 +12,72 @@ let unsubscribeUser = null;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🏆 Leaderboard page initializing...');
     
-    // Try to load current user if auth is available
-    loadCurrentUserIfAvailable();
-    
-    // Load leaderboard data immediately
-    loadLeaderboard('all');
-    
-    // Load challenges
-    loadChallenges();
+    // Check authentication and load user data
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            console.log('✅ User authenticated:', user.email);
+            loadCurrentUser(user.uid);
+            loadLeaderboard('all');
+            
+            // Load challenges after user data is ready
+            setTimeout(() => {
+                console.log('⏱️ Loading challenges after delay...');
+                loadChallenges();
+            }, 1500);
+        } else {
+            console.log('❌ No user logged in, redirecting to login...');
+            window.location.href = '../pages/login.html';
+        }
+    });
 });
 
-// ==================== LOAD CURRENT USER (OPTIONAL) ====================
+// ==================== LOAD CURRENT USER ====================
 
-async function loadCurrentUserIfAvailable() {
+async function loadCurrentUser(userId) {
+    console.log('👤 Loading user data for:', userId);
+    
     try {
-        // Check if auth is available and user is logged in
-        if (typeof auth !== 'undefined' && auth.currentUser) {
-            const userId = auth.currentUser.uid;
-            console.log('👤 Loading user data for:', userId);
-            
-            // Real-time listener for user data
-            unsubscribeUser = db.collection('users').doc(userId)
-                .onSnapshot(doc => {
-                    if (doc.exists) {
-                        currentUserData = { id: doc.id, ...doc.data() };
-                        console.log('✅ User data loaded:', currentUserData.displayName);
-                        updateUserUI();
-                    } else {
-                        console.warn('⚠️ User document not found');
-                        setDefaultUser();
-                    }
-                }, error => {
-                    console.error('❌ Error loading user:', error);
-                    setDefaultUser();
-                });
-        } else {
-            console.log('ℹ️ No auth available, using guest user');
-            setDefaultUser();
-        }
+        // Real-time listener for user data
+        unsubscribeUser = db.collection('users').doc(userId)
+            .onSnapshot(doc => {
+                if (doc.exists) {
+                    currentUserData = { id: doc.id, ...doc.data() };
+                    console.log('✅ User data loaded:', currentUserData.displayName);
+                    console.log('📊 User stats:', {
+                        points: currentUserData.points,
+                        totalReports: currentUserData.totalReports,
+                        verifiedReports: currentUserData.verifiedReports,
+                        currentStreak: currentUserData.currentStreak,
+                        badgesEarned: currentUserData.badgesEarned
+                    });
+                    
+                    updateUserUI();
+                    
+                    // Reload challenges with actual user data
+                    loadChallenges();
+                } else {
+                    console.error('❌ User document not found');
+                    showError('User profile not found. Please contact support.');
+                }
+            }, error => {
+                console.error('❌ Error loading user:', error);
+                showError('Failed to load user data: ' + error.message);
+            });
     } catch (error) {
-        console.error('❌ Error in loadCurrentUserIfAvailable:', error);
-        setDefaultUser();
+        console.error('❌ Error setting up user listener:', error);
+        showError('Failed to initialize user data');
     }
-}
-
-// Set default guest user
-function setDefaultUser() {
-    currentUserData = {
-        id: 'guest',
-        displayName: 'Guest User',
-        points: 0,
-        totalReports: 0,
-        verifiedReports: 0,
-        currentStreak: 0,
-        badgesEarned: 0
-    };
-    updateUserUI();
 }
 
 // Update user UI elements
 function updateUserUI() {
     if (!currentUserData) return;
     
-    const displayName = currentUserData.displayName || 'Guest User';
+    const displayName = currentUserData.displayName || 'User';
     const points = currentUserData.points || 0;
     const photoURL = currentUserData.photoURL;
+    
+    console.log('🎨 Updating UI for:', displayName);
     
     document.getElementById('displayName').textContent = displayName;
     document.getElementById('userPoints').textContent = `${points.toLocaleString()} points`;
@@ -121,34 +122,10 @@ function loadLeaderboard(period) {
         unsubscribeLeaderboard();
     }
     
-    // Calculate date range based on period
-    let startDate = null;
-    if (period === 'week') {
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
-        console.log('📅 Week filter:', startDate);
-    } else if (period === 'month') {
-        startDate = new Date();
-        startDate.setMonth(startDate.getMonth() - 1);
-        console.log('📅 Month filter:', startDate);
-    }
-    
     // Build query
     let query = db.collection('leaderboard')
         .orderBy('points', 'desc')
         .limit(50);
-    
-    // Note: For period filtering with date ranges, you need composite index
-    // For now, we'll filter all-time only
-    if (startDate && period !== 'all') {
-        console.log('⚠️ Period filtering requires composite index in Firestore');
-        // Uncomment when index is created:
-        // query = db.collection('leaderboard')
-        //     .where('lastUpdated', '>=', firebase.firestore.Timestamp.fromDate(startDate))
-        //     .orderBy('lastUpdated', 'desc')
-        //     .orderBy('points', 'desc')
-        //     .limit(50);
-    }
     
     // Real-time listener for leaderboard
     unsubscribeLeaderboard = query.onSnapshot(snapshot => {
@@ -169,12 +146,12 @@ function loadLeaderboard(period) {
                 reports: data.totalReports || 0,
                 badges: data.badgesEarned || 0,
                 trend: calculateTrend(data),
-                trendValue: Math.floor(Math.random() * 5) + 1 // Mock for now
+                trendValue: Math.floor(Math.random() * 5) + 1
             });
         });
         
         // Find current user's rank
-        if (currentUserData && currentUserData.id !== 'guest') {
+        if (currentUserData) {
             const userIndex = allLeaders.findIndex(leader => leader.userId === currentUserData.id);
             currentUserRank = userIndex >= 0 ? userIndex + 1 : null;
             console.log('🎯 Current user rank:', currentUserRank || 'Not in top 50');
@@ -186,48 +163,28 @@ function loadLeaderboard(period) {
             displayPodium(allLeaders.slice(0, 3));
             displayLeaderboardTable(allLeaders);
         } else {
-            console.log('⚠️ No leaderboard data, loading mock data');
-            loadMockLeaderboard();
+            console.log('⚠️ No leaderboard data available');
+            displayEmptyState();
         }
         
     }, error => {
         console.error('❌ Error loading leaderboard:', error);
         showError('Failed to load leaderboard: ' + error.message);
-        loadMockLeaderboard();
+        displayEmptyState();
     });
 }
 
-// Load mock leaderboard (fallback)
-function loadMockLeaderboard() {
-    console.log('📦 Loading mock leaderboard data');
+// Display empty state
+function displayEmptyState() {
+    const container = document.getElementById('podiumContainer');
+    container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No leaderboard data available yet</p>';
     
-    const mockNames = [
-        'Arjun Kumar', 'Priya Sharma', 'Rahul Verma', 'Ananya Patel', 'Rohan Singh',
-        'Sneha Reddy', 'Vikram Joshi', 'Divya Gupta', 'Amit Desai', 'Kavya Iyer',
-        'Siddharth Roy', 'Meera Nair', 'Aditya Mehta', 'Pooja Shah', 'Karthik Rao'
-    ];
-    
-    allLeaders = mockNames.map((name, index) => ({
-        userId: `mock-${index}`,
-        rank: index + 1,
-        name: name,
-        initials: getInitials(name),
-        photoURL: null,
-        points: 5000 - (index * 200),
-        reports: 150 - (index * 5),
-        badges: Math.max(8 - Math.floor(index / 2), 0),
-        trend: Math.random() > 0.5 ? 'up' : 'down',
-        trendValue: Math.floor(Math.random() * 5) + 1
-    }));
-    
-    displayPodium(allLeaders.slice(0, 3));
-    displayLeaderboardTable(allLeaders);
+    const tbody = document.getElementById('leaderboardBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">No rankings available</td></tr>';
 }
 
 // Calculate trend based on recent activity
 function calculateTrend(userData) {
-    // You can implement this based on comparing current points with historical data
-    // For now, return random for demonstration
     return Math.random() > 0.5 ? 'up' : 'down';
 }
 
@@ -245,15 +202,19 @@ function displayPodium(topThree) {
     console.log('🏆 Displaying podium for top 3');
     
     container.innerHTML = topThree.map((leader, index) => {
+        const isCurrentUser = currentUserData && leader.userId === currentUserData.id;
         const avatarHTML = leader.photoURL 
             ? `<img src="${leader.photoURL}" alt="${leader.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`
             : leader.initials;
             
         return `
-            <div class="podium-card rank-${leader.rank}">
+            <div class="podium-card rank-${leader.rank} ${isCurrentUser ? 'current-user-podium' : ''}">
                 <div class="medal">${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}</div>
                 <div class="podium-avatar">${avatarHTML}</div>
-                <div class="podium-name">${leader.name}</div>
+                <div class="podium-name">
+                    ${leader.name}
+                    ${isCurrentUser ? '<span style="font-size: 0.8rem; color: var(--primary);"> (You)</span>' : ''}
+                </div>
                 <div class="podium-points">
                     <i class="fas fa-star"></i>
                     ${leader.points.toLocaleString()}
@@ -300,7 +261,9 @@ function displayLeaderboardTable(leaders) {
                     <div class="user-cell">
                         ${avatarHTML}
                         <div class="user-info-small">
-                            <div class="user-name">${leader.name}${isCurrentUser ? ' (You)' : ''}</div>
+                            <div class="user-name">
+                                ${leader.name}${isCurrentUser ? ' <span style="color: var(--primary); font-weight: 600;">(You)</span>' : ''}
+                            </div>
                             <div class="user-badges">
                                 ${Array(Math.min(leader.badges, 8)).fill().map(() => '<div class="badge-icon">★</div>').join('')}
                             </div>
@@ -325,6 +288,12 @@ function displayLeaderboardTable(leaders) {
 // Load challenges from Firebase
 async function loadChallenges() {
     console.log('🎯 Loading challenges...');
+    console.log('👤 Current user data:', currentUserData);
+    
+    if (!currentUserData) {
+        console.log('⚠️ User data not loaded yet, skipping challenges');
+        return;
+    }
     
     try {
         // Check if challenges collection exists
@@ -342,7 +311,7 @@ async function loadChallenges() {
                 const data = doc.data();
                 
                 // Get user's progress for this challenge
-                const userProgress = currentUserData?.challengeProgress?.[doc.id] || 0;
+                const userProgress = currentUserData.challengeProgress?.[doc.id] || 0;
                 
                 challenges.push({
                     id: doc.id,
@@ -362,18 +331,19 @@ async function loadChallenges() {
         }
     } catch (error) {
         console.error('❌ Error loading challenges:', error);
+        console.log('📦 Falling back to default challenges');
         loadDefaultChallenges();
     }
 }
 
-// Load default challenges (fallback)
+// Load default challenges (using actual user data)
 function loadDefaultChallenges() {
     console.log('📦 Loading default challenges');
-    
-    if (!currentUserData) {
-        displayChallenges([]);
-        return;
-    }
+    console.log('📊 User stats for challenges:');
+    console.log('  - Total Reports:', currentUserData.totalReports);
+    console.log('  - Verified Reports:', currentUserData.verifiedReports);
+    console.log('  - Current Streak:', currentUserData.currentStreak);
+    console.log('  - Badges Earned:', currentUserData.badgesEarned);
     
     const challenges = [
         {
@@ -388,7 +358,7 @@ function loadDefaultChallenges() {
             title: 'Verification Expert',
             description: 'Get 20 reports verified',
             reward: '+750 points',
-            progress: currentUserData.verifiedReports || 0,
+            progress: Math.min(currentUserData.verifiedReports || 0, 20),
             total: 20,
             timeLeft: '5 days left'
         },
@@ -396,7 +366,7 @@ function loadDefaultChallenges() {
             title: 'Streak Master',
             description: 'Maintain a 7-day streak',
             reward: '+300 points',
-            progress: currentUserData.currentStreak || 0,
+            progress: Math.min(currentUserData.currentStreak || 0, 7),
             total: 7,
             timeLeft: 'Ongoing'
         },
@@ -404,12 +374,13 @@ function loadDefaultChallenges() {
             title: 'Badge Collector',
             description: 'Earn 5 badges',
             reward: '+600 points',
-            progress: currentUserData.badgesEarned || 0,
+            progress: Math.min(currentUserData.badgesEarned || 0, 5),
             total: 5,
             timeLeft: '1 week left'
         }
     ];
     
+    console.log('✅ Created', challenges.length, 'default challenges with user progress');
     displayChallenges(challenges);
 }
 
@@ -430,20 +401,34 @@ function calculateTimeLeft(endDate) {
     return `${hours} hour${hours > 1 ? 's' : ''} left`;
 }
 
-// Display challenges
+// Display challenges with user progress
 function displayChallenges(challenges) {
     const grid = document.getElementById('challengesGrid');
     
+    if (!grid) {
+        console.error('❌ challengesGrid element not found in DOM!');
+        return;
+    }
+    
     if (!challenges || challenges.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1; padding: 40px;">No active challenges at the moment</p>';
+        console.warn('⚠️ No challenges to display');
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: #666;">
+                <i class="fas fa-trophy" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
+                <p style="font-size: 18px; margin-bottom: 10px;">No active challenges at the moment</p>
+                <p style="font-size: 14px; opacity: 0.7;">Check back soon for new challenges!</p>
+            </div>
+        `;
         return;
     }
     
     console.log(`🎯 Displaying ${challenges.length} challenges`);
     
-    grid.innerHTML = challenges.map(challenge => {
+    const challengesHTML = challenges.map(challenge => {
         const percentage = Math.min((challenge.progress / challenge.total * 100), 100).toFixed(0);
         const isCompleted = challenge.progress >= challenge.total;
+        
+        console.log(`  - ${challenge.title}: ${challenge.progress}/${challenge.total} (${percentage}%)`);
         
         return `
             <div class="challenge-card ${isCompleted ? 'completed' : ''}">
@@ -451,7 +436,7 @@ function displayChallenges(challenges) {
                     <div>
                         <div class="challenge-title">
                             ${challenge.title}
-                            ${isCompleted ? '<span style="margin-left: 8px;">✓</span>' : ''}
+                            ${isCompleted ? '<span style="margin-left: 8px; color: #22c55e;">✓</span>' : ''}
                         </div>
                         <div class="challenge-description">${challenge.description}</div>
                     </div>
@@ -473,6 +458,9 @@ function displayChallenges(challenges) {
             </div>
         `;
     }).join('');
+    
+    grid.innerHTML = challengesHTML;
+    console.log('✅ Challenges displayed successfully');
 }
 
 // ==================== HELPER FUNCTIONS ====================
@@ -514,19 +502,14 @@ function showError(message) {
 
 // Logout function
 function logout() {
-    if (typeof auth !== 'undefined' && auth.currentUser) {
-        if (confirm('Are you sure you want to logout?')) {
-            auth.signOut().then(() => {
-                console.log('✅ Logged out successfully');
-                window.location.href = '../pages/index.html';
-            }).catch(error => {
-                console.error('❌ Logout error:', error);
-                alert('Failed to logout. Please try again.');
-            });
-        }
-    } else {
-        // No auth, just redirect
-        window.location.href = '../pages/index.html';
+    if (confirm('Are you sure you want to logout?')) {
+        auth.signOut().then(() => {
+            console.log('✅ Logged out successfully');
+            window.location.href = '../pages/login.html';
+        }).catch(error => {
+            console.error('❌ Logout error:', error);
+            alert('Failed to logout. Please try again.');
+        });
     }
 }
 
@@ -539,4 +522,4 @@ window.addEventListener('beforeunload', () => {
     if (unsubscribeUser) unsubscribeUser();
 });
 
-console.log('✅ Leaderboard page loaded - Ready to display data');
+console.log('✅ Leaderboard page loaded - Waiting for authentication');
