@@ -30,6 +30,7 @@
     color: white;
     font-size: 1.5rem;
     cursor: pointer;
+    padding: 0.5rem;
 }
 
 .search-bar {
@@ -668,6 +669,7 @@
 .report-item,
 .contributor-item {
     animation: fadeIn 0.5s ease-out forwards;
+    opacity: 0;
 }
 
 .stat-card:nth-child(1) { animation-delay: 0.1s; }

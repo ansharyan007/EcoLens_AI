@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners
     document.getElementById('timeFilter').addEventListener('change', loadTopContributors);
+    document.getElementById('refreshHeatmap')?.addEventListener('click', loadHeatmapData);
 });
 
 // ============================================
@@ -36,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function checkAuth() {
     auth.onAuthStateChanged(user => {
         if (!user) {
-            window.location.href = 'index.html';
+            window.location.href = '../index.html';
         } else {
             loadUserInfo(user);
         }
@@ -48,9 +49,19 @@ function loadUserInfo(user) {
         .then(doc => {
             if (doc.exists) {
                 const userData = doc.data();
-                document.getElementById('userName').textContent = userData.name || user.email;
+                const displayName = userData.name || user.email;
+                const points = userData.points || 0;
+                
+                // Update top nav
+                document.getElementById('userName').textContent = displayName;
                 document.getElementById('userAvatar').querySelector('img').src = 
-                    userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name || 'User')}&background=10b981&color=fff`;
+                    userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=22c55e&color=fff`;
+                
+                // Update sidebar
+                document.getElementById('sidebarUsername').textContent = displayName;
+                document.getElementById('sidebarPoints').textContent = `${formatNumber(points)} points`;
+                document.getElementById('sidebarAvatar').querySelector('img').src = 
+                    userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=22c55e&color=fff`;
             }
         })
         .catch(error => console.error('Error loading user:', error));
@@ -63,20 +74,15 @@ function loadUserInfo(user) {
 function initSidebar() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
-    const closeSidebar = document.getElementById('closeSidebar');
     
-    menuToggle.addEventListener('click', () => {
+    menuToggle?.addEventListener('click', () => {
         sidebar.classList.toggle('open');
-    });
-    
-    closeSidebar.addEventListener('click', () => {
-        sidebar.classList.remove('open');
     });
     
     // Close sidebar on mobile when clicking outside
     document.addEventListener('click', (e) => {
         if (window.innerWidth <= 768) {
-            if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            if (sidebar && !sidebar.contains(e.target) && !menuToggle?.contains(e.target)) {
                 sidebar.classList.remove('open');
             }
         }
@@ -86,11 +92,13 @@ function initSidebar() {
 function initTopNav() {
     const logoutBtn = document.getElementById('logoutBtn');
     
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn?.addEventListener('click', () => {
         auth.signOut().then(() => {
-            window.location.href = 'index.html';
+            showToast('Logged out successfully', 'success');
+            window.location.href = '../index.html';
         }).catch(error => {
             console.error('Logout error:', error);
+            showToast('Error logging out', 'error');
         });
     });
 }
@@ -101,7 +109,6 @@ function initTopNav() {
 
 async function loadDashboardData() {
     try {
-        // Load all data in parallel
         await Promise.all([
             loadStatistics(),
             loadRecentReports(),
@@ -109,6 +116,7 @@ async function loadDashboardData() {
         ]);
     } catch (error) {
         console.error('Error loading dashboard data:', error);
+        showToast('Error loading dashboard data', 'error');
     }
 }
 
@@ -120,28 +128,27 @@ async function loadStatistics() {
     try {
         // Count total sites
         const sitesSnapshot = await db.collection('sites').get();
-        document.getElementById('totalSites').textContent = sitesSnapshot.size;
+        document.getElementById('totalSites').textContent = formatNumber(sitesSnapshot.size);
         
         // Count total users
         const usersSnapshot = await db.collection('users').get();
-        document.getElementById('totalUsers').textContent = usersSnapshot.size;
+        document.getElementById('totalUsers').textContent = formatNumber(usersSnapshot.size);
         
         // Count total reports
         const reportsSnapshot = await db.collection('reports').get();
-        document.getElementById('totalReports').textContent = reportsSnapshot.size;
+        document.getElementById('totalReports').textContent = formatNumber(reportsSnapshot.size);
         
-        // Count violations (reports with violation flag)
+        // Count violations
         let violationCount = 0;
         reportsSnapshot.forEach(doc => {
             if (doc.data().violationDetected === true) {
                 violationCount++;
             }
         });
-        document.getElementById('totalViolations').textContent = violationCount;
+        document.getElementById('totalViolations').textContent = formatNumber(violationCount);
         
     } catch (error) {
         console.error('Error loading statistics:', error);
-        // Set default values on error
         document.getElementById('totalSites').textContent = '0';
         document.getElementById('totalUsers').textContent = '0';
         document.getElementById('totalReports').textContent = '0';
@@ -157,7 +164,6 @@ async function loadRecentReports() {
     const reportsList = document.getElementById('recentReportsList');
     
     try {
-        // Get last 10 reports ordered by timestamp
         const reportsSnapshot = await db.collection('reports')
             .orderBy('timestamp', 'desc')
             .limit(10)
@@ -178,7 +184,6 @@ async function loadRecentReports() {
         for (const doc of reportsSnapshot.docs) {
             const report = doc.data();
             
-            // Get site name
             let siteName = 'Unknown Site';
             if (report.siteId) {
                 const siteDoc = await db.collection('sites').doc(report.siteId).get();
@@ -187,7 +192,6 @@ async function loadRecentReports() {
                 }
             }
             
-            // Get user name
             let userName = 'Anonymous';
             if (report.userId) {
                 const userDoc = await db.collection('users').doc(report.userId).get();
@@ -196,11 +200,9 @@ async function loadRecentReports() {
                 }
             }
             
-            // Format timestamp
             const date = report.timestamp?.toDate();
             const timeAgo = formatTimeAgo(date);
             
-            // Determine status
             let statusClass = 'pending';
             let statusText = 'Pending';
             if (report.violationDetected) {
@@ -252,12 +254,10 @@ async function loadTopContributors() {
     const timeFilter = document.getElementById('timeFilter').value;
     
     try {
-        // Get top contributors from leaderboard
         let query = db.collection('leaderboard')
             .orderBy('points', 'desc')
             .limit(5);
         
-        // Apply time filter if needed
         if (timeFilter === 'month') {
             const monthAgo = new Date();
             monthAgo.setMonth(monthAgo.getMonth() - 1);
@@ -285,7 +285,6 @@ async function loadTopContributors() {
         contributorsSnapshot.forEach((doc, index) => {
             const contributor = doc.data();
             
-            // Determine rank class
             let rankClass = '';
             if (index === 0) rankClass = 'gold';
             else if (index === 1) rankClass = 'silver';
@@ -301,7 +300,7 @@ async function loadTopContributors() {
                 <div class="contributor-info">
                     <div class="contributor-name">${contributor.name}</div>
                     <div class="contributor-points">
-                        <i class="fas fa-star"></i> ${contributor.points} points
+                        <i class="fas fa-star"></i> ${formatNumber(contributor.points)} points
                     </div>
                 </div>
             `;
@@ -325,16 +324,13 @@ async function loadTopContributors() {
 // ============================================
 
 function initHeatmap() {
-    // Initialize Leaflet map
     map = L.map('globalHeatmap').setView([20, 0], 2);
     
-    // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18
     }).addTo(map);
     
-    // Load heatmap data
     loadHeatmapData();
 }
 
@@ -346,7 +342,6 @@ async function loadHeatmapData() {
         sitesSnapshot.forEach(doc => {
             const site = doc.data();
             if (site.location && site.location.latitude && site.location.longitude) {
-                // Intensity based on carbon emissions
                 const intensity = Math.min(site.carbonEmissions / 100, 1);
                 heatData.push([
                     site.location.latitude,
@@ -356,19 +351,17 @@ async function loadHeatmapData() {
             }
         });
         
-        // Remove old heat layer if exists
         if (heatLayer) {
             map.removeLayer(heatLayer);
         }
         
-        // Add heat layer
         heatLayer = L.heatLayer(heatData, {
             radius: 25,
             blur: 15,
             maxZoom: 10,
             gradient: {
-                0.0: '#10b981',
-                0.5: '#f59e0b',
+                0.0: '#22c55e',
+                0.5: '#eab308',
                 1.0: '#ef4444'
             }
         }).addTo(map);
@@ -383,18 +376,15 @@ async function loadHeatmapData() {
 // ============================================
 
 function setupRealtimeListeners() {
-    // Listen for new reports
     db.collection('reports')
         .orderBy('timestamp', 'desc')
         .limit(1)
         .onSnapshot(snapshot => {
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added') {
-                    // Reload statistics and recent reports
                     loadStatistics();
                     loadRecentReports();
                     
-                    // Update notification badge
                     const badge = document.getElementById('notifBadge');
                     const currentCount = parseInt(badge.textContent) || 0;
                     badge.textContent = currentCount + 1;
@@ -403,30 +393,4 @@ function setupRealtimeListeners() {
         });
 }
 
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-function formatTimeAgo(date) {
-    if (!date) return 'Just now';
-    
-    const seconds = Math.floor((new Date() - date) / 1000);
-    
-    const intervals = {
-        year: 31536000,
-        month: 2592000,
-        week: 604800,
-        day: 86400,
-        hour: 3600,
-        minute: 60
-    };
-    
-    for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-        const interval = Math.floor(seconds / secondsInUnit);
-        if (interval >= 1) {
-            return `${interval} ${unit}${interval > 1 ? 's' : ''} ago`;
-        }
-    }
-    
-    return 'Just now';
-}
+console.log('✅ Dashboard loaded successfully');
