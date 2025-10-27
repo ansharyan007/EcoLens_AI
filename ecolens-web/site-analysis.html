@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +16,7 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/site-analysis.css">
 </head>
+
 <body>
     <!-- Sidebar Navigation -->
     <aside id="sidebar">
@@ -241,7 +243,8 @@
                     <!-- Time-Lapse Viewer -->
                     <div class="timelapse-viewer">
                         <div class="timelapse-image-container">
-                            <img id="timelapseImage" src="https://via.placeholder.com/800x600/1f2937/22c55e?text=2015" alt="Time-lapse">
+                            <img id="timelapseImage" src="https://via.placeholder.com/800x600/1f2937/22c55e?text=2015"
+                                alt="Time-lapse">
                             <div class="timelapse-year-overlay">
                                 <h1 id="currentYear">2015</h1>
                             </div>
@@ -271,8 +274,8 @@
 
                         <!-- Progress Bar -->
                         <div class="progress-container">
-                            <input type="range" id="timelapseProgress" min="0" max="10" value="0" 
-                                   class="progress-slider" oninput="seekTimelapse(this.value)">
+                            <input type="range" id="timelapseProgress" min="0" max="10" value="0"
+                                class="progress-slider" oninput="seekTimelapse(this.value)">
                             <div class="progress-labels">
                                 <span>2015</span>
                                 <span>2020</span>
@@ -357,5 +360,7 @@
     <script src="../js/auth.js"></script>
     <script src="../js/utils.js"></script>
     <script src="../js/site-analysis.js"></script>
+    <script src="../js/timelapse.js"></script>
 </body>
+
 </html>
