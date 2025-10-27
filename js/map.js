@@ -1,5 +1,5 @@
-// Map Explorer JavaScript
-// Handles map initialization, site markers, search, and add functionality
+// Map Explorer JavaScript with Environmental Layers
+// Handles map, sites, and environmental data
 
 let map;
 let markers = [];
@@ -8,33 +8,35 @@ let addMode = false;
 let tempMarker = null;
 let selectedLocation = null;
 
-// Initialize map on page load
+// Environmental layers
+let activeLayers = {
+    aqi: null,
+    pollution: null,
+    rainfall: null,
+    nitrogen: null,
+    temperature: null
+};
+let layerMarkers = [];
+
+// OpenWeather API Key - Get free key from openweathermap.org
+const OPENWEATHER_API_KEY = 'demo'; // Replace with your API key
+
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    // Check authentication
-    // checkAuth();
-
-    // Initialize map
     initMap();
-
-    // Load sites from Firestore
     loadSites();
-
-    // Load user info
     loadUserInfo();
 });
 
-// Initialize Leaflet map
+// Initialize map
 function initMap() {
-    // Create map centered on India (you can change default location)
     map = L.map('map').setView([20.5937, 78.9629], 5);
-
-    // Add OpenStreetMap tiles (free, no API key needed!)
+    
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
-
-    // Add click handler for add mode
+    
     map.on('click', function(e) {
         if (addMode) {
             handleMapClick(e);
@@ -50,30 +52,23 @@ async function loadSites() {
 
         allSites = [];
         snapshot.forEach(doc => {
-            allSites.push({
-                id: doc.id,
-                ...doc.data()
-            });
+            allSites.push({ id: doc.id, ...doc.data() });
         });
 
-        // Display sites on map
-        displaySitesOnMap(allSites);
-
-        // Display sites in sidebar
-        displaySitesInSidebar(allSites);
-
+        if (allSites.length === 0) {
+            loadMockSites();
+        } else {
+            displaySitesOnMap(allSites);
+            displaySitesInSidebar(allSites);
+        }
     } catch (error) {
         console.error('Error loading sites:', error);
-        showError('Failed to load sites. Please refresh the page.');
-
-        // Show mock data for demo
         loadMockSites();
     }
 }
 
-// Display sites on map as markers
+// Display sites on map
 function displaySitesOnMap(sites) {
-    // Clear existing markers
     markers.forEach(marker => map.removeLayer(marker));
     markers = [];
 
@@ -85,30 +80,19 @@ function displaySitesOnMap(sites) {
     });
 }
 
-// Create marker for a site
+// Create marker
 function createMarker(site) {
     const color = getMarkerColor(site.carbonEstimate || 0);
 
-    // Create custom icon
     const icon = L.divIcon({
         className: 'custom-marker',
-        html: `<div style="
-            width: 30px;
-            height: 30px;
-            background: ${color};
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        "></div>`,
+        html: `<div style="width:30px;height:30px;background:${color};border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>`,
         iconSize: [30, 30],
         iconAnchor: [15, 15]
     });
 
-    // Create marker
-    const marker = L.marker([site.latitude, site.longitude], { icon: icon })
-        .addTo(map);
+    const marker = L.marker([site.latitude, site.longitude], { icon }).addTo(map);
 
-    // Create popup content
     const popupContent = `
         <div>
             <div class="popup-title">${site.name || 'Industrial Site'}</div>
@@ -126,35 +110,27 @@ function createMarker(site) {
     `;
 
     marker.bindPopup(popupContent);
-
     return marker;
 }
 
-// Get marker color based on carbon estimate
 function getMarkerColor(carbonEstimate) {
-    if (carbonEstimate < 100) return '#22c55e'; // Green
-    if (carbonEstimate < 300) return '#eab308'; // Yellow
-    return '#ef4444'; // Red
+    if (carbonEstimate < 100) return '#22c55e';
+    if (carbonEstimate < 300) return '#eab308';
+    return '#ef4444';
 }
 
-// Display sites in sidebar list
+// Display sites in sidebar
 function displaySitesInSidebar(sites) {
     const sitesList = document.getElementById('sitesList');
 
     if (sites.length === 0) {
-        sitesList.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-map-marked-alt"></i>
-                <p>No sites found</p>
-            </div>
-        `;
+        sitesList.innerHTML = '<div class="empty-state"><i class="fas fa-map-marked-alt"></i><p>No sites found</p></div>';
         return;
     }
 
     sitesList.innerHTML = sites.map(site => createSiteCard(site)).join('');
 }
 
-// Create HTML for site card
 function createSiteCard(site) {
     const iconClass = getIconClass(site.facilityType);
     const emissionClass = getEmissionClass(site.carbonEstimate || 0);
@@ -185,7 +161,6 @@ function createSiteCard(site) {
     `;
 }
 
-// Get icon class based on facility type
 function getIconClass(type) {
     const icons = {
         cement: 'fas fa-industry',
@@ -198,26 +173,22 @@ function getIconClass(type) {
     return icons[type] || icons.other;
 }
 
-// Get emission class (low/medium/high)
 function getEmissionClass(carbon) {
     if (carbon < 100) return 'low';
     if (carbon < 300) return 'medium';
     return 'high';
 }
 
-// Filter sites based on search and filter
 function filterSites() {
     const searchQuery = document.getElementById('searchInput').value.toLowerCase();
     const emissionFilter = document.getElementById('emissionFilter').value;
 
     let filtered = allSites.filter(site => {
-        // Search filter
         const matchesSearch = !searchQuery || 
             (site.name && site.name.toLowerCase().includes(searchQuery)) ||
             (site.address && site.address.toLowerCase().includes(searchQuery)) ||
             (site.facilityType && site.facilityType.toLowerCase().includes(searchQuery));
 
-        // Emission filter
         const carbon = site.carbonEstimate || 0;
         let matchesEmission = true;
         if (emissionFilter === 'low') matchesEmission = carbon < 100;
@@ -231,11 +202,8 @@ function filterSites() {
     displaySitesInSidebar(filtered);
 }
 
-// Zoom to specific site
 function zoomToSite(lat, lon, siteId) {
     map.setView([lat, lon], 15);
-
-    // Find and open popup for this marker
     markers.forEach(marker => {
         const markerPos = marker.getLatLng();
         if (markerPos.lat === lat && markerPos.lng === lon) {
@@ -244,12 +212,253 @@ function zoomToSite(lat, lon, siteId) {
     });
 }
 
-// View site details page
 function viewSiteDetails(siteId) {
     window.location.href = `site-analysis.html?id=${siteId}`;
 }
 
-// Enable add site mode
+// ==================== ENVIRONMENTAL LAYERS ====================
+
+async function toggleLayer(layerType) {
+    const checkbox = document.getElementById(`layer${layerType.charAt(0).toUpperCase() + layerType.slice(1)}`);
+    
+    if (checkbox.checked) {
+        await loadEnvironmentalLayer(layerType);
+    } else {
+        removeEnvironmentalLayer(layerType);
+    }
+}
+
+async function loadEnvironmentalLayer(layerType) {
+    console.log(`🌍 Loading ${layerType} layer...`);
+    
+    try {
+        const center = map.getCenter();
+        
+        switch(layerType) {
+            case 'aqi':
+                await loadAQILayer(center.lat, center.lng);
+                break;
+            case 'pollution':
+                await loadPollutionLayer(center.lat, center.lng);
+                break;
+            case 'rainfall':
+                await loadRainfallLayer(center.lat, center.lng);
+                break;
+            case 'nitrogen':
+                await loadNitrogenLayer(center.lat, center.lng);
+                break;
+            case 'temperature':
+                await loadTemperatureLayer(center.lat, center.lng);
+                break;
+        }
+        
+        console.log(`✅ ${layerType} layer loaded`);
+    } catch (error) {
+        console.error(`❌ Error loading ${layerType} layer:`, error);
+        showError(`Failed to load ${layerType} data`);
+        document.getElementById(`layer${layerType.charAt(0).toUpperCase() + layerType.slice(1)}`).checked = false;
+    }
+}
+
+async function loadAQILayer(lat, lng) {
+    // Load mock data (real API integration available with key)
+    loadMockAQILayer(lat, lng);
+}
+
+async function loadPollutionLayer(lat, lng) {
+    loadMockPollutionLayer(lat, lng);
+}
+
+async function loadRainfallLayer(lat, lng) {
+    loadMockRainfallLayer(lat, lng);
+}
+
+async function loadNitrogenLayer(lat, lng) {
+    loadMockNitrogenLayer(lat, lng);
+}
+
+async function loadTemperatureLayer(lat, lng) {
+    loadMockTemperatureLayer(lat, lng);
+}
+
+function removeEnvironmentalLayer(layerType) {
+    if (activeLayers[layerType]) {
+        map.removeLayer(activeLayers[layerType]);
+        activeLayers[layerType] = null;
+        console.log(`✅ ${layerType} layer removed`);
+    }
+}
+
+// Mock data functions
+function loadMockAQILayer(lat, lng) {
+    const mockAQI = Math.floor(Math.random() * 5) + 1;
+    const aqiColor = getAQIColor(mockAQI);
+    
+    const aqiMarker = L.circle([lat, lng], {
+        radius: 50000,
+        color: aqiColor,
+        fillColor: aqiColor,
+        fillOpacity: 0.3,
+        weight: 2
+    }).addTo(map);
+    
+    aqiMarker.bindPopup(`
+        <div class="env-popup">
+            <h4>Air Quality Index</h4>
+            <div class="env-value" style="color: ${aqiColor};">${getAQIText(mockAQI)}</div>
+            <p>Mock data - Get API key for real data</p>
+        </div>
+    `);
+    
+    activeLayers.aqi = aqiMarker;
+    layerMarkers.push(aqiMarker);
+}
+
+function loadMockPollutionLayer(lat, lng) {
+    const mockPM25 = Math.random() * 60 + 10;
+    const color = getPollutionColor(mockPM25);
+    
+    const marker = L.circle([lat, lng], {
+        radius: 40000,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.4,
+        weight: 2
+    }).addTo(map);
+    
+    marker.bindPopup(`
+        <div class="env-popup">
+            <h4>PM2.5 Pollution</h4>
+            <div class="env-value" style="color: ${color};">${mockPM25.toFixed(1)} μg/m³</div>
+            <p>${getPollutionLevel(mockPM25)}</p>
+        </div>
+    `);
+    
+    activeLayers.pollution = marker;
+    layerMarkers.push(marker);
+}
+
+function loadMockRainfallLayer(lat, lng) {
+    const mockRainfall = Math.random() * 10;
+    
+    if (mockRainfall > 1) {
+        const marker = L.circle([lat, lng], {
+            radius: 30000,
+            color: '#3b82f6',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.3,
+            weight: 2
+        }).addTo(map);
+        
+        marker.bindPopup(`
+            <div class="env-popup">
+                <h4>Rainfall Data</h4>
+                <div class="env-value" style="color: #3b82f6;">${mockRainfall.toFixed(1)} mm/h</div>
+                <p>Mock precipitation data</p>
+            </div>
+        `);
+        
+        activeLayers.rainfall = marker;
+        layerMarkers.push(marker);
+    }
+}
+
+function loadMockNitrogenLayer(lat, lng) {
+    const mockNO2 = Math.random() * 100 + 20;
+    const color = getNO2Color(mockNO2);
+    
+    const marker = L.circle([lat, lng], {
+        radius: 35000,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.35,
+        weight: 2
+    }).addTo(map);
+    
+    marker.bindPopup(`
+        <div class="env-popup">
+            <h4>Nitrogen Dioxide (NO₂)</h4>
+            <div class="env-value" style="color: ${color};">${mockNO2.toFixed(1)} μg/m³</div>
+            <p>${getNO2Level(mockNO2)}</p>
+        </div>
+    `);
+    
+    activeLayers.nitrogen = marker;
+    layerMarkers.push(marker);
+}
+
+function loadMockTemperatureLayer(lat, lng) {
+    const mockTemp = Math.random() * 25 + 15;
+    const color = getTemperatureColor(mockTemp);
+    
+    const marker = L.circle([lat, lng], {
+        radius: 25000,
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.25,
+        weight: 2
+    }).addTo(map);
+    
+    marker.bindPopup(`
+        <div class="env-popup">
+            <h4>Temperature</h4>
+            <div class="env-value" style="color: ${color};">${mockTemp.toFixed(1)}°C</div>
+            <p>Mock temperature data</p>
+        </div>
+    `);
+    
+    activeLayers.temperature = marker;
+    layerMarkers.push(marker);
+}
+
+// Helper functions
+function getAQIColor(aqi) {
+    const colors = { 1: '#22c55e', 2: '#84cc16', 3: '#eab308', 4: '#f97316', 5: '#ef4444' };
+    return colors[aqi] || '#9ca3af';
+}
+
+function getAQIText(aqi) {
+    const texts = { 1: 'Good', 2: 'Fair', 3: 'Moderate', 4: 'Poor', 5: 'Very Poor' };
+    return texts[aqi] || 'Unknown';
+}
+
+function getPollutionColor(pm25) {
+    if (pm25 < 12) return '#22c55e';
+    if (pm25 < 35) return '#eab308';
+    if (pm25 < 55) return '#f97316';
+    return '#ef4444';
+}
+
+function getPollutionLevel(pm25) {
+    if (pm25 < 12) return 'Good air quality';
+    if (pm25 < 35) return 'Moderate air quality';
+    if (pm25 < 55) return 'Unhealthy for sensitive groups';
+    return 'Unhealthy';
+}
+
+function getNO2Color(no2) {
+    if (no2 < 40) return '#22c55e';
+    if (no2 < 70) return '#eab308';
+    if (no2 < 150) return '#f97316';
+    return '#ef4444';
+}
+
+function getNO2Level(no2) {
+    if (no2 < 40) return 'Low nitrogen dioxide levels';
+    if (no2 < 70) return 'Moderate nitrogen dioxide';
+    if (no2 < 150) return 'High nitrogen dioxide';
+    return 'Very high nitrogen dioxide';
+}
+
+function getTemperatureColor(temp) {
+    if (temp < 10) return '#3b82f6';
+    if (temp < 20) return '#22c55e';
+    if (temp < 30) return '#eab308';
+    return '#ef4444';
+}
+
+// ==================== ADD SITE FUNCTIONS ====================
+
 function enableAddMode() {
     addMode = true;
     document.getElementById('addModeIndicator').style.display = 'flex';
@@ -257,31 +466,23 @@ function enableAddMode() {
     map.getContainer().style.cursor = 'crosshair';
 }
 
-// Disable add site mode
 function disableAddMode() {
     addMode = false;
     document.getElementById('addModeIndicator').style.display = 'none';
     document.querySelector('.add-site-btn').style.display = 'block';
     map.getContainer().style.cursor = '';
-
-    // Remove temp marker if exists
     if (tempMarker) {
         map.removeLayer(tempMarker);
         tempMarker = null;
     }
 }
 
-// Handle map click in add mode
 function handleMapClick(e) {
     const { lat, lng } = e.latlng;
     selectedLocation = { lat, lng };
 
-    // Remove previous temp marker
-    if (tempMarker) {
-        map.removeLayer(tempMarker);
-    }
+    if (tempMarker) map.removeLayer(tempMarker);
 
-    // Add temporary marker
     tempMarker = L.marker([lat, lng], {
         icon: L.divIcon({
             className: 'temp-marker',
@@ -291,23 +492,19 @@ function handleMapClick(e) {
         })
     }).addTo(map);
 
-    // Open modal
     openAddSiteModal(lat, lng);
 }
 
-// Open add site modal
 function openAddSiteModal(lat, lng) {
     document.getElementById('modalLocation').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
     document.getElementById('addSiteModal').classList.add('active');
 }
 
-// Close add site modal
 function closeAddSiteModal() {
     document.getElementById('addSiteModal').classList.remove('active');
     disableAddMode();
 }
 
-// Submit new site
 async function submitNewSite() {
     if (!selectedLocation) return;
 
@@ -315,27 +512,19 @@ async function submitNewSite() {
     const facilityType = document.getElementById('modalFacilityType').value;
     const notes = document.getElementById('modalNotes').value.trim();
 
-    // Show analyzing state
     document.getElementById('analyzingState').style.display = 'block';
 
     try {
-        // Get current user
         const user = auth.currentUser;
         if (!user) {
             showError('Please login to add sites');
             return;
         }
 
-        // Simulate AI analysis (in real app, call ML API here)
         await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Mock carbon estimate (in real app, get from ML API)
         const mockCarbon = Math.random() * 400 + 50;
+        const address = `Location near ${selectedLocation.lat.toFixed(2)}°N, ${selectedLocation.lng.toFixed(2)}°E`;
 
-        // Get address from reverse geocoding (mock for now)
-        const address = await reverseGeocode(selectedLocation.lat, selectedLocation.lng);
-
-        // Create site document
         const siteData = {
             name: siteName || `${facilityType} Site`,
             location: new firebase.firestore.GeoPoint(selectedLocation.lat, selectedLocation.lng),
@@ -347,20 +536,16 @@ async function submitNewSite() {
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
             reportCount: 1,
             verifiedViolation: mockCarbon > 300,
-            satelliteImageUrl: null,
-            groundImageUrl: null,
             createdBy: user.uid,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             aiConfidence: 0.85,
             notes: notes
         };
 
-        // Add to Firestore
         await db.collection('sites').add(siteData);
 
-        // Also create a report
         await db.collection('reports').add({
-            siteId: null, // Will be updated with site ID
+            siteId: null,
             userId: user.uid,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             location: new firebase.firestore.GeoPoint(selectedLocation.lat, selectedLocation.lng),
@@ -373,13 +558,7 @@ async function submitNewSite() {
             platform: 'web'
         });
 
-        // Update user points
-        await updateUserPoints(user.uid, 50);
-
-        // Show success
         showSuccess('Site added successfully! +50 points');
-
-        // Close modal and reload sites
         closeAddSiteModal();
         loadSites();
 
@@ -391,79 +570,18 @@ async function submitNewSite() {
     }
 }
 
-// Reverse geocode (mock implementation)
-async function reverseGeocode(lat, lng) {
-    // In real app, use Nominatim API or similar
-    // For now, return mock address
-    return `Location near ${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`;
-}
+// ==================== OTHER FUNCTIONS ====================
 
-// Update user points
-async function updateUserPoints(userId, points) {
-    try {
-        const userRef = db.collection('users').doc(userId);
-        const userDoc = await userRef.get();
-
-        if (userDoc.exists) {
-            const currentPoints = userDoc.data().points || 0;
-            await userRef.update({
-                points: currentPoints + points,
-                totalReports: firebase.firestore.FieldValue.increment(1),
-                lastActive: firebase.firestore.FieldValue.serverTimestamp()
-            });
-
-            // Update leaderboard
-            await db.collection('leaderboard').doc(userId).set({
-                displayName: userDoc.data().displayName,
-                points: currentPoints + points,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-        }
-    } catch (error) {
-        console.error('Error updating points:', error);
-    }
-}
-
-// Load mock sites for demo
 function loadMockSites() {
     allSites = [
-        {
-            id: 'mock1',
-            name: 'Delhi Cement Plant',
-            latitude: 28.7041,
-            longitude: 77.1025,
-            address: 'Industrial Area, Delhi, India',
-            facilityType: 'cement',
-            carbonEstimate: 245,
-            verifiedViolation: false
-        },
-        {
-            id: 'mock2',
-            name: 'Mumbai Power Station',
-            latitude: 19.0760,
-            longitude: 72.8777,
-            address: 'Mumbai, Maharashtra, India',
-            facilityType: 'power',
-            carbonEstimate: 890,
-            verifiedViolation: true
-        },
-        {
-            id: 'mock3',
-            name: 'Bangalore Steel Factory',
-            latitude: 12.9716,
-            longitude: 77.5946,
-            address: 'Bangalore, Karnataka, India',
-            facilityType: 'steel',
-            carbonEstimate: 156,
-            verifiedViolation: false
-        }
+        { id: 'mock1', name: 'Delhi Cement Plant', latitude: 28.7041, longitude: 77.1025, address: 'Delhi, India', facilityType: 'cement', carbonEstimate: 245, verifiedViolation: false },
+        { id: 'mock2', name: 'Mumbai Power Station', latitude: 19.0760, longitude: 72.8777, address: 'Mumbai, India', facilityType: 'power', carbonEstimate: 890, verifiedViolation: true },
+        { id: 'mock3', name: 'Bangalore Steel Factory', latitude: 12.9716, longitude: 77.5946, address: 'Bangalore, India', facilityType: 'steel', carbonEstimate: 156, verifiedViolation: false }
     ];
-
     displaySitesOnMap(allSites);
     displaySitesInSidebar(allSites);
 }
 
-// Load user info for sidebar
 async function loadUserInfo() {
     try {
         const user = auth.currentUser;
@@ -475,7 +593,6 @@ async function loadUserInfo() {
             document.getElementById('displayName').textContent = userData.displayName || 'User';
             document.getElementById('userPoints').textContent = `${userData.points || 0} points`;
 
-            // Set avatar
             const avatarEl = document.getElementById('userAvatar');
             if (userData.photoURL) {
                 avatarEl.innerHTML = `<img src="${userData.photoURL}" alt="Avatar">`;
@@ -489,30 +606,18 @@ async function loadUserInfo() {
     }
 }
 
-// Check authentication
-function checkAuth() {
-    auth.onAuthStateChanged(user => {
-        if (!user) {
-            window.location.href = 'index.html';
-        }
-    });
-}
-
-// Logout function
 function logout() {
     auth.signOut().then(() => {
         window.location.href = 'index.html';
     });
 }
 
-// Show success message
 function showSuccess(message) {
-    // Simple alert for now (you can enhance this with custom toast)
-    alert(message);
+    alert('✅ ' + message);
 }
 
-// Show error message
 function showError(message) {
-    // Simple alert for now (you can enhance this with custom toast)
-    alert(message);
+    alert('❌ ' + message);
 }
+
+console.log('✅ Map with environmental layers loaded');

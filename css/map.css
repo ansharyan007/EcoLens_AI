@@ -552,3 +552,123 @@
         height: 50vh;
     }
 }
+
+/* Environmental Layers Panel */
+.env-layers-panel {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    min-width: 280px;
+    z-index: 1000;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.env-layers-panel h3 {
+    color: white;
+    font-size: 1rem;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.env-layers-panel h3 i {
+    color: var(--primary);
+}
+
+.layer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.layer-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.layer-toggle input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.layer-toggle label {
+    color: #e5e7eb;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    flex: 1;
+}
+
+.layer-toggle label i {
+    color: var(--primary);
+    width: 20px;
+}
+
+/* Environmental Popup Styles */
+.env-popup {
+    min-width: 200px;
+}
+
+.env-popup h4 {
+    color: white;
+    font-size: 1rem;
+    margin: 0 0 0.5rem 0;
+}
+
+.env-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+}
+
+.env-details {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.env-details p {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+}
+
+.env-details strong {
+    color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .env-layers-panel {
+        top: 10px;
+        right: 10px;
+        min-width: 250px;
+        padding: 1rem;
+    }
+    
+    .env-layers-panel h3 {
+        font-size: 0.9rem;
+    }
+    
+    .layer-toggle {
+        padding: 0.5rem;
+    }
+    
+    .layer-toggle label {
+        font-size: 0.85rem;
+    }
+}
