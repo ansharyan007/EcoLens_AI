@@ -46,14 +46,14 @@
         </nav>
 
         <div class="user-info">
-            <div class="avatar" id="userAvatar">
+            <div class="avatar" id="sidebarAvatar">
                 <i class="fas fa-user"></i>
             </div>
             <div class="user-details">
-                <p class="username" id="displayName">Loading...</p>
-                <p class="points" id="userPoints">0 points</p>
+                <div class="username" id="sidebarUsername">Loading...</div>
+                <div class="points" id="sidebarPoints">0 points</div>
             </div>
-            <button class="logout-btn" onclick="logout()" title="Logout">
+            <button class="logout-btn" id="logoutBtn" title="Logout">
                 <i class="fas fa-sign-out-alt"></i>
             </button>
         </div>
@@ -77,10 +77,10 @@
                     <i class="fas fa-bell"></i>
                     <span class="badge" id="notifBadge">3</span>
                 </div>
-                <div class="user-avatar" id="topNavAvatar">
+                <div class="user-avatar" id="userAvatar">
                     <i class="fas fa-user"></i>
                 </div>
-                <span class="username" id="topNavUserName">Loading...</span>
+                <span class="username" id="userName">Loading...</span>
             </div>
         </header>
 
@@ -159,28 +159,10 @@
                             <button class="btn-icon" title="Refresh" id="refreshHeatmap">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
-                            <button class="btn-icon" title="Zoom In" id="zoomInHeatmap">
-                                <i class="fas fa-search-plus"></i>
-                            </button>
-                            <button class="btn-icon" title="Zoom Out" id="zoomOutHeatmap">
-                                <i class="fas fa-search-minus"></i>
-                            </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <div id="globalHeatmap" class="heatmap-container"></div>
-                        <div class="heatmap-legend">
-                            <div class="legend-title">Carbon Intensity</div>
-                            <div class="legend-gradient">
-                                <span class="legend-label">Low</span>
-                                <div class="gradient-bar">
-                                    <div class="gradient-stop" style="background: #22c55e"></div>
-                                    <div class="gradient-stop" style="background: #eab308"></div>
-                                    <div class="gradient-stop" style="background: #ef4444"></div>
-                                </div>
-                                <span class="legend-label">High</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
 

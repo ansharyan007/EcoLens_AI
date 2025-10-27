@@ -23,10 +23,6 @@ let addMode = false;
 let tempMarker = null;
 let selectedLocation = null;
 
-// User data variables
-let currentUserData = null;
-let unsubscribeUser = null;
-
 // Layer groups
 let aqiLayerGroup;
 let rainfallLayerGroup;
@@ -64,7 +60,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initMap();
     loadSites();
-    initUserAuth();
+    loadUserInfo();
     loadIndianCitiesList();
 
     // NO automatic data loading - wait for user search
@@ -73,87 +69,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // Show initial message
     updateSearchResultsInfo(null);
 });
-
-// ==================== USER AUTHENTICATION & INFO ====================
-
-function initUserAuth() {
-    auth.onAuthStateChanged(user => {
-        if (user) {
-            debugLog('✅', 'User authenticated:', user.email);
-            loadCurrentUser(user.uid);
-        } else {
-            debugLog('⚠️', 'No user logged in');
-            setDefaultUserUI();
-        }
-    });
-}
-
-function loadCurrentUser(userId) {
-    debugLog('👤', 'Loading user data for:', userId);
-    
-    try {
-        unsubscribeUser = db.collection('users').doc(userId)
-            .onSnapshot(doc => {
-                if (doc.exists) {
-                    currentUserData = { id: doc.id, ...doc.data() };
-                    debugLog('✅', 'User data loaded:', currentUserData.displayName);
-                    updateUserUI();
-                } else {
-                    debugLog('❌', 'User document not found');
-                    setDefaultUserUI();
-                }
-            }, error => {
-                debugLog('❌', 'Error loading user:', error);
-                setDefaultUserUI();
-            });
-    } catch (error) {
-        debugLog('❌', 'Error setting up user listener:', error);
-        setDefaultUserUI();
-    }
-}
-
-function updateUserUI() {
-    if (!currentUserData) return;
-    
-    const displayName = currentUserData.displayName || 'User';
-    const points = currentUserData.points || 0;
-    const photoURL = currentUserData.photoURL;
-    
-    const displayNameEl = document.getElementById('displayName');
-    if (displayNameEl) displayNameEl.textContent = displayName;
-    
-    const userPointsEl = document.getElementById('userPoints');
-    if (userPointsEl) userPointsEl.textContent = `${points.toLocaleString()} points`;
-    
-    const avatarEl = document.getElementById('userAvatar');
-    if (avatarEl) {
-        if (photoURL) {
-            avatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-        } else {
-            avatarEl.innerHTML = getInitials(displayName);
-        }
-    }
-}
-
-function setDefaultUserUI() {
-    const displayNameEl = document.getElementById('displayName');
-    if (displayNameEl) displayNameEl.textContent = 'User';
-    
-    const userPointsEl = document.getElementById('userPoints');
-    if (userPointsEl) userPointsEl.textContent = '0 points';
-    
-    const avatarEl = document.getElementById('userAvatar');
-    if (avatarEl) avatarEl.innerHTML = 'U';
-}
-
-function getInitials(name) {
-    if (!name) return 'U';
-    return name.split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
-}
 
 // Load Indian cities list
 async function loadIndianCitiesList() {
@@ -1374,6 +1289,30 @@ async function submitNewSite() {
 
 // ==================== UTILITY FUNCTIONS ====================
 
+async function loadUserInfo() {
+    try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            document.getElementById('displayName').textContent = userData.displayName || 'User';
+            document.getElementById('userPoints').textContent = `${userData.points || 0} points`;
+
+            const avatarEl = document.getElementById('userAvatar');
+            if (userData.photoURL) {
+                avatarEl.innerHTML = `<img src="${userData.photoURL}" alt="Avatar">`;
+            } else {
+                const initial = (userData.displayName || 'U').charAt(0).toUpperCase();
+                avatarEl.innerHTML = initial;
+            }
+        }
+    } catch (error) {
+        debugLog('❌', 'Error loading user info:', error);
+    }
+}
+
 function logout() {
     auth.signOut().then(() => {
         window.location.href = 'index.html';
@@ -1397,12 +1336,5 @@ function showError(message) {
     document.body.appendChild(notification);
     setTimeout(() => notification.remove(), 3000);
 }
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (unsubscribeUser) {
-        unsubscribeUser();
-    }
-});
 
 debugLog('✅', 'Map with ON-DEMAND LOADING loaded successfully');

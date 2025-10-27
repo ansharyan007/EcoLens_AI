@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Data Manager - CarbonScope AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 25px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .data-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .data-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-details {
+            flex: 1;
+        }
+
+        .data-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .data-info {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .code-preview {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+
+        .time-series {
+            font-size: 0.9em;
+            color: #9A7DEE;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌱 Firebase Data Manager</h1>
+            <p>Upload and manage CarbonScope AI emission site data (1 at a time)</p>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="section">
+            <h2>📤 Upload One Emission Site</h2>
+            <div class="code-preview">
+                <strong>Custom Site Data Preview:</strong><br>
+                name: Delhi Cement Plant<br>
+                latitude: 28.7041<br>
+                longitude: 77.1025<br>
+                address: Delhi, India<br>
+                facilityType: cement<br>
+                carbonEstimate: 245<br>
+                verifiedViolation: false<br>
+                reportCount: 1<br>
+                aiConfidence: 0.85<br>
+                notes: Major cement production facility in Delhi<br>
+                carbonTimeSeries (2015-2025):<br>
+                {"2015":180,"2016":200,"2017":210,"2018":220,"2019":235,"2020":240,"2021":243,"2022":249,"2023":252,"2024":241,"2025":245}
+            </div>
+
+            <button class="btn btn-success" onclick="uploadCustomSite()">
+                <span id="uploadIcon">⬆️</span>
+                <span id="uploadText">Upload Site</span>
+            </button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <!-- View/Delete Last Uploaded -->
+        <div class="section">
+            <h2>👀 Last Uploaded Data (and Delete)</h2>
+            <div id="dataList" class="data-list" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase Configuration (Your existing config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBPfTfjKys1mPQE7LQ535gSgiHR-ZxLu8",
+            authDomain: "ecolens-ai-18544.firebaseapp.com",
+            projectId: "ecolens-ai-18544",
+            storageBucket: "ecolens-ai-18544.firebasestorage.app",
+            messagingSenderId: "528597463277",
+            appId: "1:528597463277:web:9367bf3bc41304d98e1ce4",
+            measurementId: "G-6MB4WMXWD2"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // ---- CHANGE THIS OBJECT FOR NEW UPLOADS ----
+ let customSite = {
+    name: "Indore Industrial Grid Substation",
+    latitude: 22.77213669420609,
+    longitude: 75.84775184706004,
+    address: "Industrial Area, Indore, Madhya Pradesh, India",
+    facilityType: "power",
+    carbonEstimate: 217,
+    verifiedViolation: false,
+    reportCount: 2,
+    aiConfidence: 0.83,
+    notes: "Major industrial substation in Indore's commercial district, transformer complex, high security fencing, heavy truck traffic and industrial vehicle access at highway junction.",
+    carbonTimeSeries: {
+        2015: 138,
+        2016: 147,
+        2017: 158,
+        2018: 171,
+        2019: 185,
+        2020: 195,
+        2021: 205,
+        2022: 212,
+        2023: 215,
+        2024: 216,
+        2025: 217
+    }
+};
+
+
+
+
+
+
+
+
+
+
+        // ---------------------------------------------
+
+        // Tracks last uploaded document ID
+        let lastUploadedSiteId = null;
+
+        function showStatus(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="status ${type}">${message}</div>`;
+            element.style.display = 'block';
+        }
+
+        function showSpinner(iconId, textId, text) {
+            document.getElementById(iconId).innerHTML = '<div class="spinner"></div>';
+            document.getElementById(textId).textContent = text;
+        }
+
+        function hideSpinner(iconId, textId, icon, text) {
+            document.getElementById(iconId).textContent = icon;
+            document.getElementById(textId).textContent = text;
+        }
+
+        // Upload one custom record with a year-by-year carbon time series
+        async function uploadCustomSite() {
+            showSpinner('uploadIcon', 'uploadText', 'Uploading...');
+            showStatus('uploadStatus', 'Uploading site...', 'info');
+            try {
+                const docRef = await db.collection('sites').add({
+                    ...customSite,
+                    location: new firebase.firestore.GeoPoint(customSite.latitude, customSite.longitude),
+                    createdBy: 'admin',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                lastUploadedSiteId = docRef.id;
+                hideSpinner('uploadIcon', 'uploadText', '⬆️', 'Upload Site');
+                showStatus('uploadStatus', `✅ Uploaded. Document ID: <b>${docRef.id}</b>`, 'success');
+                displayLastUploadedSite();
+            } catch (error) {
+                console.error('Upload error:', error);
+                hideSpinner('uploadIcon', 'uploadText', '⬆️', 'Upload Site');
+                showStatus('uploadStatus', `❌ Upload failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Show the uploaded site and enable deleting it
+        function displayLastUploadedSite() {
+            const dataList = document.getElementById('dataList');
+            if (!lastUploadedSiteId) {
+                dataList.style.display = 'none';
+                return;
+            }
+            dataList.innerHTML = '';
+            const item = document.createElement('div');
+            item.className = 'data-item';
+            const emissionLevel =
+                customSite.carbonEstimate < 100 ? '🟢 Low' :
+                    customSite.carbonEstimate < 300 ? '🟡 Medium' : '🔴 High';
+            let ts = '';
+            if (customSite.carbonTimeSeries) {
+                ts = `<span class="time-series">[2015-2025]: ${Object.entries(customSite.carbonTimeSeries).map(
+                    ([year, val]) => year + ': ' + val
+                ).join(', ')}</span>`;
+            }
+            item.innerHTML = `
+                <div class="data-details">
+                    <div class="data-name">${customSite.name}</div>
+                    <div class="data-info">
+                        ${emissionLevel} • ${customSite.carbonEstimate} tons/year • 
+                        ${customSite.facilityType} • ${customSite.address}<br>
+                        ${ts}
+                    </div>
+                </div>
+                <button class="btn btn-danger" onclick="deleteUploadedSite()" style="padding: 8px 15px; font-size: 0.9rem;">
+                    🗑️ Delete
+                </button>
+            `;
+            dataList.appendChild(item);
+            dataList.style.display = 'block';
+        }
+
+        // Delete last uploaded record
+        async function deleteUploadedSite() {
+            if (!lastUploadedSiteId) {
+                showStatus('uploadStatus', 'No uploaded site to delete.', 'info');
+                return;
+            }
+            if (!confirm('Delete the most recently uploaded site?')) return;
+            try {
+                await db.collection('sites').doc(lastUploadedSiteId).delete();
+                showStatus('uploadStatus', '✅ Uploaded site deleted successfully.', 'success');
+                lastUploadedSiteId = null;
+                document.getElementById('dataList').style.display = 'none';
+            } catch (error) {
+                showStatus('uploadStatus', `❌ Delete failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Show ready status on page load
+        window.addEventListener('load', () => {
+            showStatus('uploadStatus', 'Ready to upload site data.', 'info');
+            displayLastUploadedSite();
+        });
+    </script>
+</body>
+
+</html>

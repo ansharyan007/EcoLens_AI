@@ -2,8 +2,6 @@ console.log('📊 Dashboard.js loading...');
 
 let map, heatLayer;
 let isDemoMode = false;
-let currentUserData = null;
-let unsubscribeUser = null;
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -30,12 +28,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize components
     initSidebar();
     initTopNav();
+    initHeatmap();
+    
+    // Load data
+    console.log('📥 Loading dashboard data...');
+    loadDashboardData();
+    
+    // Setup real-time listeners
+    setupRealtimeListeners();
     
     // Event listeners
     document.getElementById('timeFilter')?.addEventListener('change', loadTopContributors);
     document.getElementById('refreshHeatmap')?.addEventListener('click', loadHeatmapData);
-    document.getElementById('zoomInHeatmap')?.addEventListener('click', zoomInHeatmap);
-    document.getElementById('zoomOutHeatmap')?.addEventListener('click', zoomOutHeatmap);
 });
 
 // ============================================
@@ -47,17 +51,12 @@ function checkAuth() {
     
     auth.onAuthStateChanged(user => {
         if (!user) {
-            console.log('⚠️ No user logged in - redirecting to login');
-            window.location.href = '../pages/login.html';
+            console.log('⚠️ No user logged in - using demo mode');
+            loadDemoMode();
+            isDemoMode = true;
         } else {
             console.log('✅ User logged in:', user.email);
             loadUserInfo(user);
-            
-            // Load dashboard data after user is authenticated
-            loadDashboardData();
-            
-            // Setup real-time listeners
-            setupRealtimeListeners();
         }
     });
 }
@@ -65,96 +64,73 @@ function checkAuth() {
 function loadUserInfo(user) {
     console.log('👤 Loading user info for:', user.uid);
     
-    // Use real-time listener for user data
-    unsubscribeUser = db.collection('users').doc(user.uid)
-        .onSnapshot(doc => {
+    db.collection('users').doc(user.uid).get()
+        .then(doc => {
             if (doc.exists) {
-                currentUserData = { id: doc.id, ...doc.data() };
-                console.log('✅ User data loaded:', currentUserData.displayName);
-                updateUserUI();
-            } else {
-                console.error('❌ User document not found');
-                loadDemoMode();
+                const userData = doc.data();
+                console.log('✅ User data loaded:', userData);
+                
+                const displayName = userData.displayName || user.email;
+                const points = userData.points || 0;
+                const avatarUrl = userData.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=22c55e&color=fff`;
+                
+                // Update top nav with null checks
+                const userNameEl = document.getElementById('userName');
+                if (userNameEl) userNameEl.textContent = displayName;
+                
+                const userAvatarEl = document.getElementById('userAvatar');
+                if (userAvatarEl) {
+                    const imgEl = userAvatarEl.querySelector('img');
+                    if (imgEl) {
+                        imgEl.src = avatarUrl;
+                    } else {
+                        // Create img element if it doesn't exist
+                        const newImg = document.createElement('img');
+                        newImg.src = avatarUrl;
+                        newImg.alt = displayName;
+                        userAvatarEl.appendChild(newImg);
+                    }
+                }
+                
+                // Update sidebar with null checks
+                const sidebarUsernameEl = document.getElementById('sidebarUsername');
+                if (sidebarUsernameEl) sidebarUsernameEl.textContent = displayName;
+                
+                const sidebarPointsEl = document.getElementById('sidebarPoints');
+                if (sidebarPointsEl) sidebarPointsEl.textContent = `${formatNumber(points)} points`;
+                
+                const sidebarAvatarEl = document.getElementById('sidebarAvatar');
+                if (sidebarAvatarEl) {
+                    const imgEl = sidebarAvatarEl.querySelector('img');
+                    if (imgEl) {
+                        imgEl.src = avatarUrl;
+                    } else {
+                        // Create img element if it doesn't exist
+                        const newImg = document.createElement('img');
+                        newImg.src = avatarUrl;
+                        newImg.alt = displayName;
+                        sidebarAvatarEl.appendChild(newImg);
+                    }
+                }
             }
-        }, error => {
+        })
+        .catch(error => {
             console.error('❌ Error loading user:', error);
             loadDemoMode();
         });
 }
 
-function updateUserUI() {
-    if (!currentUserData) {
-        console.warn('⚠️ No user data available');
-        return;
-    }
-    
-    const displayName = currentUserData.displayName || currentUserData.email || 'User';
-    const points = currentUserData.points || 0;
-    const photoURL = currentUserData.photoURL;
-    
-    console.log('🎨 Updating UI for:', displayName, 'with', points, 'points');
-    
-    // Update sidebar user info (FIXED ELEMENT IDs)
-    const displayNameEl = document.getElementById('displayName');
-    if (displayNameEl) {
-        displayNameEl.textContent = displayName;
-        console.log('✅ Updated displayName');
-    } else {
-        console.warn('⚠️ displayName element not found');
-    }
-    
-    const userPointsEl = document.getElementById('userPoints');
-    if (userPointsEl) {
-        userPointsEl.textContent = `${formatNumber(points)} points`;
-        console.log('✅ Updated userPoints');
-    } else {
-        console.warn('⚠️ userPoints element not found');
-    }
-    
-    const userAvatarEl = document.getElementById('userAvatar');
-    if (userAvatarEl) {
-        if (photoURL) {
-            userAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-        } else {
-            userAvatarEl.innerHTML = getInitials(displayName);
-        }
-        console.log('✅ Updated userAvatar');
-    } else {
-        console.warn('⚠️ userAvatar element not found');
-    }
-    
-    // Also update top nav if elements exist
-    const userNameEl = document.getElementById('userName');
-    if (userNameEl) {
-        userNameEl.textContent = displayName;
-    }
-    
-    const topNavAvatarEl = document.getElementById('topNavAvatar');
-    if (topNavAvatarEl && photoURL) {
-        topNavAvatarEl.innerHTML = `<img src="${photoURL}" alt="${displayName}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
-    }
-}
-
-function getInitials(name) {
-    if (!name) return 'U';
-    return name.split(' ')
-        .map(n => n[0])
-        .join('')
-        .toUpperCase()
-        .substring(0, 2);
-}
-
 function loadDemoMode() {
     console.log('🎭 Loading demo mode');
     
-    const displayNameEl = document.getElementById('displayName');
-    if (displayNameEl) displayNameEl.textContent = 'Demo User';
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) userNameEl.textContent = 'Demo User';
     
-    const userPointsEl = document.getElementById('userPoints');
-    if (userPointsEl) userPointsEl.textContent = '1,250 points';
+    const sidebarUsernameEl = document.getElementById('sidebarUsername');
+    if (sidebarUsernameEl) sidebarUsernameEl.textContent = 'Demo User';
     
-    const userAvatarEl = document.getElementById('userAvatar');
-    if (userAvatarEl) userAvatarEl.innerHTML = 'DU';
+    const sidebarPointsEl = document.getElementById('sidebarPoints');
+    if (sidebarPointsEl) sidebarPointsEl.textContent = '1,250 points';
 }
 
 // ============================================
@@ -181,24 +157,13 @@ function initTopNav() {
             return;
         }
         
-        logout();
-    });
-}
-
-function logout() {
-    if (confirm('Are you sure you want to logout?')) {
-        // Cleanup listeners
-        if (unsubscribeUser) {
-            unsubscribeUser();
-        }
-        
         auth.signOut().then(() => {
             console.log('✅ Logged out');
-            window.location.href = '../pages/login.html';
+            window.location.href = 'index.html';
         }).catch(error => {
             console.error('❌ Logout error:', error);
         });
-    }
+    });
 }
 
 // ============================================
@@ -215,12 +180,6 @@ async function loadDashboardData() {
             loadTopContributors()
         ]);
         console.log('✅ All dashboard data loaded');
-        
-        // Initialize heatmap AFTER other data is loaded
-        setTimeout(() => {
-            initHeatmap();
-        }, 500);
-        
     } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
         loadMockData();
@@ -394,7 +353,7 @@ function loadMockReports() {
     
     reportsList.innerHTML = mockReports.map(report => `
         <div class="report-item">
-            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(report.site)}&background=22c55e&color=fff" alt="Report" class="report-image">
+            <img src="https://via.placeholder.com/60" alt="Report" class="report-image">
             <div class="report-content">
                 <div class="report-title">${report.site}</div>
                 <div class="report-meta">
@@ -426,11 +385,12 @@ async function loadTopContributors() {
         
         usersSnapshot.forEach(doc => {
             const userData = doc.data();
-            if (userData.points > 0) {
+            if (userData.points > 0) { // Only include users with points
                 users.push(userData);
             }
         });
         
+        // Sort by points, display top 5
         users.sort((a, b) => (b.points || 0) - (a.points || 0));
         users = users.slice(0, 5);
         
@@ -511,7 +471,7 @@ function loadMockContributors() {
 }
 
 // ============================================
-// GLOBAL HEATMAP - FIXED VERSION
+// GLOBAL HEATMAP (still from sites)
 // ============================================
 
 function initHeatmap() {
@@ -519,41 +479,22 @@ function initHeatmap() {
     
     const heatmapEl = document.getElementById('globalHeatmap');
     if (!heatmapEl) {
-        console.error('❌ globalHeatmap element not found!');
+        console.warn('⚠️ globalHeatmap element not found');
         return;
     }
     
     try {
-        // Clear any existing map
-        if (map) {
-            map.remove();
-        }
+        map = L.map('globalHeatmap').setView([20, 0], 2);
         
-        // Initialize map with better view
-        map = L.map('globalHeatmap', {
-            center: [20, 0],
-            zoom: 2,
-            minZoom: 2,
-            maxZoom: 10,
-            worldCopyJump: true
-        });
-        
-        // Add tile layer with better visibility
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
-            maxZoom: 18,
-            noWrap: true
+            maxZoom: 18
         }).addTo(map);
         
-        console.log('✅ Heatmap initialized successfully');
-        
-        // Load heatmap data
+        console.log('✅ Heatmap initialized');
         loadHeatmapData();
-        
     } catch (error) {
         console.error('❌ Error initializing heatmap:', error);
-        // Try to load mock heatmap as fallback
-        setTimeout(loadMockHeatmap, 1000);
     }
 }
 
@@ -561,80 +502,51 @@ async function loadHeatmapData() {
     console.log('🗺️ Loading heatmap data...');
     
     if (!map) {
-        console.error('❌ Map not initialized');
+        console.warn('⚠️ Map not initialized, skipping heatmap data');
         return;
     }
     
     try {
         const sitesSnapshot = await db.collection('sites').get();
-        console.log(`✅ Found ${sitesSnapshot.size} sites for heatmap`);
+        console.log('✅ Sites for heatmap:', sitesSnapshot.size);
         
-        if (sitesSnapshot.size === 0) {
+        if (sitesSnapshot.empty) {
             console.log('⚠️ No sites found, loading mock heatmap');
             loadMockHeatmap();
             return;
         }
         
         const heatData = [];
-        let maxCarbon = 0;
-        
-        // First pass: find maximum carbon value for normalization
-        sitesSnapshot.forEach(doc => {
-            const site = doc.data();
-            const carbon = site.carbonEstimate || 0;
-            if (carbon > maxCarbon) maxCarbon = carbon;
-        });
-        
-        console.log(`📊 Max carbon value: ${maxCarbon}`);
-        
-        // Second pass: create heat data with normalized intensity
         sitesSnapshot.forEach(doc => {
             const site = doc.data();
             if (site.location) {
                 const lat = site.location.latitude || site.location._lat;
                 const lng = site.location.longitude || site.location._long;
                 if (lat && lng) {
-                    // Normalize intensity between 0.1 and 1.0
-                    const carbon = site.carbonEstimate || 0;
-                    const intensity = maxCarbon > 0 ? 
-                        Math.max(0.1, Math.min(1.0, carbon / maxCarbon)) : 0.1;
-                    
+                    const intensity = Math.min((site.carbonEstimate || 200) / 1000, 1);
                     heatData.push([lat, lng, intensity]);
+                    console.log(`✅ Added heatmap point: ${lat}, ${lng}`);
                 }
             }
         });
         
-        console.log(`📍 Generated ${heatData.length} heat points`);
-        
-        // Remove existing heat layer
         if (heatLayer) {
             map.removeLayer(heatLayer);
         }
         
         if (heatData.length > 0) {
-            // Create heat layer with more vibrant settings
             heatLayer = L.heatLayer(heatData, {
-                radius: 35,
-                blur: 20,
-                maxZoom: 8,
-                minOpacity: 0.4,
+                radius: 25,
+                blur: 15,
+                maxZoom: 10,
                 gradient: {
-                    0.0: '#22c55e',  // Green
-                    0.5: '#eab308',  // Yellow
-                    0.8: '#f97316',  // Orange
-                    1.0: '#ef4444'   // Red
+                    0.0: '#22c55e',
+                    0.5: '#eab308',
+                    1.0: '#ef4444'
                 }
             }).addTo(map);
             
-            console.log('✅ Heatmap data loaded successfully');
-            
-            // Fit map to show all heat points
-            const group = new L.featureGroup(heatData.map(point => L.marker([point[0], point[1]])));
-            map.fitBounds(group.getBounds().pad(0.1));
-            
-        } else {
-            console.log('⚠️ No valid heat data points');
-            loadMockHeatmap();
+            console.log('✅ Heatmap data loaded');
         }
         
     } catch (error) {
@@ -644,25 +556,16 @@ async function loadHeatmapData() {
 }
 
 function loadMockHeatmap() {
-    console.log('🎭 Loading mock heatmap data');
+    console.log('🎭 Loading mock heatmap');
     
-    if (!map) {
-        console.error('❌ Map not available for mock data');
-        return;
-    }
+    if (!map) return;
     
-    // More vibrant mock data with higher intensities
     const mockLocations = [
-        [28.7041, 77.1025, 0.8],  // Delhi - High intensity
-        [19.0760, 72.8777, 0.9],  // Mumbai - Very high
-        [12.9716, 77.5946, 0.6],  // Bangalore - Medium
-        [13.0827, 80.2707, 0.7],  // Chennai - Medium-high
-        [22.5726, 88.3639, 0.5],  // Kolkata - Medium
-        [17.3850, 78.4867, 0.6],  // Hyderabad
-        [18.5204, 73.8567, 0.4],  // Pune
-        [26.9124, 75.7873, 0.3],  // Jaipur
-        [26.8467, 80.9462, 0.5],  // Lucknow
-        [23.0225, 72.5714, 0.4]   // Ahmedabad
+        [28.7041, 77.1025, 0.6],
+        [19.0760, 72.8777, 0.9],
+        [12.9716, 77.5946, 0.4],
+        [13.0827, 80.2707, 0.7],
+        [22.5726, 88.3639, 0.5]
     ];
     
     if (heatLayer) {
@@ -670,35 +573,15 @@ function loadMockHeatmap() {
     }
     
     heatLayer = L.heatLayer(mockLocations, {
-        radius: 35,
-        blur: 20,
-        maxZoom: 8,
-        minOpacity: 0.4,
+        radius: 25,
+        blur: 15,
+        maxZoom: 10,
         gradient: {
             0.0: '#22c55e',
-            0.5: '#eab308', 
-            0.8: '#f97316',
+            0.5: '#eab308',
             1.0: '#ef4444'
         }
     }).addTo(map);
-    
-    // Fit map to show mock data
-    const group = new L.featureGroup(mockLocations.map(point => L.marker([point[0], point[1]])));
-    map.fitBounds(group.getBounds().pad(0.1));
-    
-    console.log('✅ Mock heatmap loaded');
-}
-
-function zoomInHeatmap() {
-    if (map) {
-        map.zoomIn();
-    }
-}
-
-function zoomOutHeatmap() {
-    if (map) {
-        map.zoomOut();
-    }
 }
 
 // ============================================
@@ -713,8 +596,10 @@ function setupRealtimeListeners() {
     
     console.log('👂 Setting up realtime listeners');
     
+    // Listen for changes in users collection (for new reports in recentActivity)
     db.collection('users')
         .onSnapshot(snapshot => {
+            // Refresh stats and reports when user data changes
             loadStatistics();
             loadRecentReports();
         }, error => {
@@ -755,13 +640,5 @@ function loadMockData() {
     loadMockContributors();
     loadMockHeatmap();
 }
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    console.log('🧹 Cleaning up listeners');
-    if (unsubscribeUser) {
-        unsubscribeUser();
-    }
-});
 
 console.log('✅ Dashboard.js loaded successfully');
